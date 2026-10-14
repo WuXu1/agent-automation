@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# crew: everyday commands, run on your own computer after ./install.sh.
+#   ./crew status            is everything working? (the health check)
+#   ./crew dashboard         open the dashboard (Tailscale must be on)
+#   ./crew restart           restart the agents when they're idle
+#   ./crew logs              the agents' recent log
+#   ./crew update            get the latest version of this kit and apply it (keeps your answers, keys and edits)
+#   ./crew key <name>        change a key: deepseek, gemini, elevenlabs, telegram-chief|tutor|assistant|coach|me
+#   ./crew voice [off]       voice-note replies in each agent's own voice (ElevenLabs), or switch them off
+#   ./crew addon <name> [off]   extras: gmail, moodle, backup
+#   ./crew backup-login      sign rclone in to Google Drive on this computer (for: ./crew addon backup)
+#   ./crew ssh               a terminal on the server
+#   ./crew destroy           delete the server and everything on it (asks twice)
+set -euo pipefail
+KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$KIT_DIR/laptop/lib.sh"
+
+need_vm() { [ -n "$(vm_ip)" ] || die "No server yet: run ./install.sh first."
+            vm_reachable || die "Can't reach your server at $(vm_ip). Is Tailscale on (and signed in with the same account) on this computer?"; }
+remote() { need_vm; vm_ssh -t "$@" </dev/tty; }
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  status|doctor) need_vm; vm_ssh "sudo crew-doctor" ;;
+  dashboard)
+    need_vm
+    url="$(vm_ssh "sudo jq -r '.dashboard_url // empty' /data/.hermes/crew.json")"
+    [ -n "$url" ] || die "The dashboard isn't set up yet: ./crew update"
+    say "Dashboard: $url   (works on any of your devices with Tailscale on)"
+    (open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || cmd.exe /c start "$url" 2>/dev/null || true) ;;
+  restart) remote "sudo crew-restart $*" ;;
+  logs) need_vm; vm_ssh "sudo journalctl -u hermes-gateway -n ${1:-80} --no-pager; sudo tail -n 40 /data/.hermes/logs/gateway.log" ;;
+  update)
+    if [ -d "$KIT_DIR/.git" ] && have git; then
+      say "Getting the latest kit…"
+      git -C "$KIT_DIR" pull --ff-only || warn "Couldn't update the kit with git (local edits?). Applying the copy you have."
+    else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./crew update."; fi
+    need_vm
+    ship_kit && ok "Kit copied to the server"
+    vm_ssh -t "sudo CREW_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty ;;
+  key)   [ -n "${1:-}" ] || die "Which key? deepseek, gemini, elevenlabs, telegram-chief, telegram-tutor, telegram-assistant, telegram-coach"
+         remote "sudo crew-key $1" ;;
+  voice) remote "sudo crew-voice ${1:-}" ;;
+  addon) [ -n "${1:-}" ] || die "Which? gmail, moodle or backup (add 'off' to switch one off)"
+         remote "sudo crew-addon $1 ${2:-}" ;;
+  backup-login) bash "$KIT_DIR/vm/backup/laptop-authorize.sh" ;;
+  ssh) need_vm; vm_ssh ;;
+  destroy)
+    rg="$(get AZ_RG)"; [ -n "$rg" ] || die "No server recorded on this computer."
+    warn "This deletes the server '$(get AZ_VM)' and EVERYTHING on it (agents, memory, chats). Backups on Google Drive stay."
+    [ "$(ask "Type the server's name to confirm" "")" = "$(get AZ_VM)" ] || die "Not confirmed; nothing deleted."
+    confirm "Really delete the resource group '$rg'?" n || die "Nothing deleted."
+    az group delete -n "$rg" --yes
+    for k in STEP_VM STEP_TAILNET STEP_SERVER VM_TS_IP AZ_REGION; do put "$k" ""; done
+    ok "Deleted. Also remove '$(get AZ_VM)' from https://login.tailscale.com/admin/machines and delete the four bots in @BotFather if you won't reinstall." ;;
+  help|-h|--help|*) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

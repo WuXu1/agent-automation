@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# crew-voice: voice-note replies (optional, set up whenever you like). Send an agent a voice note and it answers with a
+# voice note in its own ElevenLabs voice; typed messages stay text. You pick a voice for each agent.
+#   sudo crew-voice          set up, or change the voices
+#   sudo crew-voice off      switch voice replies off again (the key stays saved)
+# Money: ElevenLabs' free plan has 10,000 characters a month (roughly 60 short voice replies); student offers give more.
+set -euo pipefail
+. /opt/agent-automation/vm/lib.sh
+. "$KIT/vm/stages/30-keys.sh"
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+
+install_plugin() {   # the plugin, copied into every agent's home, with voices.json naming whose voice is whose
+  local role prof dst
+  for role in $ROLES; do
+    prof="$(profile_of "$role")"; dst="$(home_of "$prof")/plugins/crew-voice"
+    install -d -o hermes -g hermes -m 755 "$dst"
+    install -o hermes -g hermes -m 644 "$KIT"/vm/plugins/crew-voice/{__init__.py,jv_eleven.py,jv_speech.py,plugin.yaml,STYLE.md} "$dst/"
+    jq --arg role "$role" '. as $c | {default_voice: ($c.voices[$role] // ""), default_model: "eleven_v4", owner: $c.owner.name,
+        personas: ([$c.agents[] | {key: ($c.voices[.role] // ""), value: "\(.name), \($c.owner.name)'"'"'s \(.title | ascii_downcase)"}]
+                   | map(select(.key != "")) | from_entries)}' "$CREW_JSON" | install -o hermes -g hermes -m 644 /dev/stdin "$dst/voices.json"
+  done
+}
+
+if [ "${1:-}" = off ]; then
+  cj_set '.features.voice' false
+  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
+  ok "Voice replies off."; /usr/local/bin/crew-restart || true; exit 0
+fi
+
+step "Voice replies"
+say "  You'll need an ElevenLabs account (https://elevenlabs.io; the free plan is enough to try it)."
+f="$(env_of chief)"
+if ! env_has "$f" ELEVENLABS_API_KEY; then
+  say "  Make an API key at https://elevenlabs.io/app/settings/api-keys (it needs 'Text to Speech' and 'Voices: read')."
+  while :; do
+    k="$(ask_secret "ElevenLabs API key")"; [ -n "$k" ] || die "No key, nothing changed."
+    [ "$(curl_status "url = \"https://api.elevenlabs.io/v1/voices\"
+header = \"xi-api-key: $k\"")" = 200 ] && break
+    warn "ElevenLabs didn't accept that key (or it can't read voices). Try again."
+  done
+  printf '%s\n' "$k" | key_for_all ELEVENLABS_API_KEY
+  ok "ElevenLabs key saved"
+fi
+k="$(env_get "$f" ELEVENLABS_API_KEY)"
+voices="$(curl_body "url = \"https://api.elevenlabs.io/v1/voices\"
+header = \"xi-api-key: $k\"" | jq -r '.voices[] | [.voice_id, .name, ((.labels // {}) | [.gender, .accent, .age, .description] | map(select(. != null)) | join(", ")), (.preview_url // "")] | @tsv')"
+k=""
+[ -n "$voices" ] || die "Couldn't list your ElevenLabs voices."
+say
+say "  Your voices (open a link to hear a sample; add more in ElevenLabs' Voice Library, then run this again):"
+printf '%s\n' "$voices" | awk -F'\t' '{printf "   %2d) %-18s %s\n       %s\n", NR, $2, $3, $4}'
+i=0
+for role in $ROLES; do
+  name="$(cj ".agents[$i].name")"; i=$((i+1))
+  cur="$(cj ".voices.$role")"
+  while :; do
+    pick="$(ask "Voice for $name (number, or a voice id)" "$( [ -n "$cur" ] && echo "$cur" || echo "$i")")"
+    if printf '%s' "$pick" | grep -Eq '^[0-9]+$'; then vid="$(printf '%s\n' "$voices" | sed -n "${pick}p" | cut -f1)"; else vid="$pick"; fi
+    printf '%s' "$vid" | grep -Eq '^[A-Za-z0-9]{10,40}$' && break
+    warn "Pick a number from the list."
+  done
+  cj_set ".voices.$role" "$(jstr "$vid")"
+  ok "$name: $(printf '%s\n' "$voices" | awk -F'\t' -v v="$vid" '$1==v{print $2}')"
+done
+cj_set '.features.voice' true
+install_plugin
+as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
+
+# Each chat: voice note in -> voice note back; typed message -> text (the agents' /voice command changes it per chat).
+# One file for the whole gateway: "telegram:<id>" is the chief's chat, "<profile>:telegram:<id>" the others'. Existing
+# choices (made with /voice) are kept.
+tid="$(cj .telegram_user_id)"; vf="$HH/gateway_voice_mode.json"
+cur="$( [ -s "$vf" ] && cat "$vf" || echo '{}')"
+printf '%s' "$cur" | jq --arg t "$tid" '{("telegram:" + $t): "voice_only", ("tutor:telegram:" + $t): "voice_only",
+    ("assistant:telegram:" + $t): "voice_only", ("coach:telegram:" + $t): "voice_only"} + .' \
+  | install -o hermes -g hermes -m 600 /dev/stdin "$vf"
+ok "Voice replies on: send any agent a voice note to hear it. In a chat, /voice changes when it speaks (off, voice_only, all)."
+/usr/local/bin/crew-restart || warn "Agents busy; voices start at the next: sudo crew-restart"

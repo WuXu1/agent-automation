@@ -1,0 +1,4 @@
+{
+  "plugins": ["react", "typescript", "oxc", "import", "jsx-a11y"],
+  "rules": { "react/react-in-jsx-scope": "off", "react-hooks/exhaustive-deps": "warn", "react-hooks/rules-of-hooks": "error" }
+}

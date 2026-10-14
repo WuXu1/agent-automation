@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# crew-restart: restart the agents only when they are idle (no board job running, no message in the last 2 minutes),
+# then wait until they answer again. Exit 2 = busy, try later.   sudo crew-restart [--now] [--check]
+set -uo pipefail
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+HH=/data/.hermes
+if [ "${1:-}" != "--now" ]; then
+  running=$(sudo -u hermes -H env HERMES_HOME=$HH /home/hermes/.local/bin/hermes kanban list </dev/null 2>/dev/null | grep -c ' running ' || true)
+  if [ "${running:-0}" != 0 ]; then echo "busy: $running board job(s) running; try again in a few minutes (or --now)"; exit 2; fi
+  recent=$(awk -v since="$(date -d '-2 min' '+%Y-%m-%d %H:%M:%S')" 'substr($0,1,19) >= since' $HH/logs/gateway.log 2>/dev/null \
+           | grep -cE 'Sending response|inbound message|Processing message' || true)
+  if [ "${recent:-0}" != 0 ]; then echo "busy: a conversation in the last 2 minutes; try again shortly (or --now)"; exit 2; fi
+fi
+[ "${1:-}" = "--check" ] && { echo "quiet"; exit 0; }
+printf '{"requested_at": %s, "via_service": true, "detached": false}' "$(date +%s)" | install -o hermes -g hermes -m 600 /dev/stdin $HH/.restart_pending.json
+systemctl restart hermes-gateway
+for i in $(seq 1 24); do
+  sleep 5
+  if systemctl is-active --quiet hermes-gateway && curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1; then echo "agents back after $((i*5))s"; exit 0; fi
+done
+echo "the agents did not come back within 2 minutes"; journalctl -u hermes-gateway -n 30 --no-pager; exit 1

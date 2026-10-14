@@ -1,0 +1,4 @@
+name: crew-voice
+version: 1.0.0
+description: "Voice-note replies: a short spoken rewrite of the reply, read by ElevenLabs v4 in the agent's own voice."
+author: "agent-automation (vm/plugins/crew-voice)"

@@ -1,0 +1,9 @@
+[Unit]
+Description=Crew Command: watch for the dashboard's backup-now request
+
+[Path]
+PathExists=/data/.hermes/hermes-dash/backup.request
+Unit=hermes-dash-backup.service
+
+[Install]
+WantedBy=multi-user.target

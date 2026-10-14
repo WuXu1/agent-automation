@@ -1,0 +1,9 @@
+[Unit]
+Description=Crew Command: start the nightly backup now, asked for from the dashboard (backup add-on)
+StartLimitIntervalSec=3600
+StartLimitBurst=4
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/hermes-dash/backup-now.sh
+TimeoutStartSec=60

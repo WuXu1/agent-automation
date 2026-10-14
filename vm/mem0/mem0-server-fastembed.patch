@@ -1,0 +1,29 @@
+diff --git a/server/main.py b/server/main.py
+index 20059fb..4054441 100644
+--- a/server/main.py
++++ b/server/main.py
+@@ -60,7 +60,7 @@ SKIPPED_REQUEST_LOG_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
+ SKIPPED_REQUEST_LOG_PREFIXES = ("/requests",)
+ 
+ BUNDLED_LLM_PROVIDERS = ("openai", "anthropic", "gemini")
+-BUNDLED_EMBEDDER_PROVIDERS = ("openai", "gemini")
++BUNDLED_EMBEDDER_PROVIDERS = ("openai", "gemini", "fastembed")   # + fastembed: local ONNX embedder (Hermes VM patch, server/mem0 in the personal-assistant repo)
+ 
+ 
+ def _warn_if_unconfigured() -> None:
+@@ -128,13 +128,14 @@ DEFAULT_CONFIG = {
+             "user": POSTGRES_USER,
+             "password": POSTGRES_PASSWORD,
+             "collection_name": POSTGRES_COLLECTION_NAME,
++            "embedding_model_dims": 384,   # BAAI/bge-small-en-v1.5
+         },
+     },
+     "llm": {
+         "provider": "openai",
+         "config": {"api_key": OPENAI_API_KEY, "temperature": 0.2, "model": DEFAULT_LLM_MODEL},
+     },
+-    "embedder": {"provider": "openai", "config": {"api_key": OPENAI_API_KEY, "model": DEFAULT_EMBEDDER_MODEL}},
++    "embedder": {"provider": "fastembed", "config": {"model": "BAAI/bge-small-en-v1.5", "embedding_dims": 384}},
+     "history_db_path": HISTORY_DB_PATH,
+ }
+ 

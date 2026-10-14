@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Tokens: see DESIGN.md. One meaning per colour. */
+@theme {
+  --color-void: #05070a;
+  --color-deck: #0a0b10;
+  --color-glass: rgb(14 17 26 / 0.66);
+  --color-glass-strong: rgb(12 14 21 / 0.9);
+  --color-line: rgb(148 163 184 / 0.12);
+  --color-line-strong: rgb(148 163 184 / 0.22);
+
+  --color-ink: #e7eaf3;
+  --color-ink-dim: #a3abbd;
+  --color-ink-faint: #7c8599;
+
+  --color-memory: #00f0ff;
+  --color-agent: #d946ef;
+  --color-ok: #10b981;
+  --color-runway: #f59e0b;
+  --color-alarm: #ef4444;
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --radius-panel: 14px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --animate-breathe: breathe 3s ease-in-out infinite;
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-void);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-void);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  ::selection { background: rgb(0 240 255 / 0.28); color: var(--color-ink); }
+  * { scrollbar-width: thin; scrollbar-color: rgb(148 163 184 / 0.25) transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: rgb(148 163 184 / 0.22); border-radius: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  :focus-visible { outline: 2px solid var(--color-memory); outline-offset: 2px; border-radius: 6px; }
+  input, textarea { caret-color: var(--color-memory); }
+  input::placeholder, textarea::placeholder { color: var(--color-ink-faint); }
+  a { text-underline-offset: 3px; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
+
+@layer components {
+  /* Panels over the sky. Elevation is the 1px line only. */
+  .glass {
+    background: var(--color-glass);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
+  }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+  .press { transition: transform 160ms var(--ease-out), background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
+  .press:active:not(:disabled) { transform: scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe { animation: none; }
+  .press:active:not(:disabled) { transform: none; }
+}
+
+@keyframes feed-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes feed-in { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* Agent Studio: a line between two agents who are working together right now. The dashes run from whoever is waiting to the
+   one doing the work (or up to the lead when a worker is waiting on an answer). */
+@keyframes talk-flow {
+  to { stroke-dashoffset: -24; }
+}
+.talk-flow { animation: talk-flow 0.9s linear infinite; }
+.talk-flow-up { animation: talk-flow 0.9s linear infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .talk-flow, .talk-flow-up { animation: none; }
+}
+
+/* Agent Studio's terminal window: the cursor while an agent is working */
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[blink_1s_steps\(1\)_infinite\] { animation: none; }
+}

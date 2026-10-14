@@ -1,0 +1,31 @@
+# Installed by agent-automation as /etc/systemd/system/hermes-gateway.service (@UID@ and @TZ@ are filled in).
+# One process serves all four agents (Telegram, scheduled jobs, the board, the local API) as the unprivileged `hermes` user.
+[Unit]
+Description=Hermes Agent gateway (your four agents)
+After=network-online.target mem0-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/data/workspace
+Environment=HOME=/home/hermes
+Environment=HERMES_HOME=/data/.hermes
+Environment=HERMES_TIMEZONE=@TZ@
+Environment=TZ=@TZ@
+# Board workers run in a systemd user scope, which needs the hermes user's session (loginctl enable-linger hermes).
+Environment=XDG_RUNTIME_DIR=/run/user/@UID@
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/@UID@/bus
+# Give up on a silent model stream after 2 attempts, then fall back or answer with an error.
+Environment=HERMES_STREAM_RETRIES=1
+Environment=PATH=/home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/hermes/.local/bin/hermes gateway run --replace --external-supervisor
+Restart=always
+RestartSec=10
+# If memory runs out, the kernel stops a browser or helper before the gateway.
+OOMScoreAdjust=-500
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

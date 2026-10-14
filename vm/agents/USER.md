@@ -1,0 +1,5 @@
+- Name: {{OWNER}} ({{PRONOUNS}}).
+- Lives in {{HOME_PLACE}}; timezone {{TIMEZONE}}. Use 24-hour times.
+- Studies: {{STUDIES}}.
+- Prefers short, plain answers with the news first; on a student budget.
+- {{OWNER}} can tell any agent to change or remove anything in this profile; keep it to a few lasting lines.

@@ -1,0 +1,9 @@
+[Unit]
+Description=Crew Command: watch for the dashboard's network jobs (AI enhance, memory sorting, skills hub, add-on checks)
+
+[Path]
+PathExistsGlob=/data/.hermes/hermes-dash/jobs/*.req.json
+Unit=hermes-dash-jobs.service
+
+[Install]
+WantedBy=multi-user.target

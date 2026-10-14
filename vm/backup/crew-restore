@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# crew-restore: put your agents back as they were in one of the nightly backups.
+#   sudo crew-restore                      choose a backup in your Google Drive (newest first)
+#   sudo crew-restore FILE.tar.gz.gpg      use an archive you already copied to this server
+#   sudo crew-restore --list               only list the backups in your Drive
+# On a brand-new server: run ./install.sh from your laptop first (it builds the server and the agents), then
+#   sudo bash /opt/agent-automation/vm/backup/crew-restore
+# It downloads the archive, unlocks it with your passphrase, shows what it holds and asks before changing anything. Then it stops the
+# agents and the memory server, puts back /data/.hermes, /data/workspace and /data/tools and the shared memory's databases, and starts
+# everything again. Every file it overwrites (and the memory databases as they were) is kept in /var/backups/crew-restore-<time> first.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || exec sudo bash "$0" "$@"
+. /opt/agent-automation/vm/lib.sh
+. "$KIT/vm/backup/lib-backup.sh"
+umask 077
+cd /
+
+WORK=/var/tmp/crew-restore              # the decrypted backup, only while this runs (root only; always deleted at the end)
+TS="$(date +%Y%m%d-%H%M%S)"
+SAFE=/var/backups/crew-restore-$TS      # what the restore replaced
+MEM0_ENV=$HH/mem0-server/server.env
+cleanup() { rm -rf "$WORK"; }
+trap cleanup EXIT
+
+case "${1:-}" in -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+
+list_remote() {   # newest first: "date time|bytes|name"
+  rclone --config "$BK_CONF/rclone.conf" lsf --format tsp --separator '|' "gdrive:$BK_FOLDER" --include '*.tar.gz.gpg' 2>/dev/null | sort -r
+}
+
+need_drive() {
+  ensure_rclone
+  if ! drive_ok; then
+    step "Connect your Google Drive (to fetch the backups)"
+    setup_drive || die "Google Drive isn't connected. Or download the backup in your browser, copy it here and run: sudo crew-restore FILE"
+  fi
+}
+
+if [ "${1:-}" = --list ]; then
+  need_drive
+  list_remote | awk -F'|' '{printf "  %s  %6.0f MB  %s\n", $1, $2/1048576, $3}'
+  exit 0
+fi
+
+# Preconditions: a server the installer has set up (the hermes user, the memory database's owner).
+if ! id hermes >/dev/null 2>&1 || [ ! -d "$HH" ]; then die "This server isn't set up yet. Run ./install.sh from your laptop first, then this."; fi
+runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='mem0'" 2>/dev/null | grep -q 1 \
+  || die "The shared memory isn't set up on this server yet. Run ./install.sh from your laptop first (it carries on where it stopped)."
+
+exec 9>"$BK_LOCK"
+flock -n 9 || die "A backup is running right now. Try again in a few minutes."
+
+rm -rf "$WORK"; install -d -m 700 "$WORK"
+ARCH="$WORK/backup.tar.gz.gpg"
+
+# 1. the archive
+step "Which backup?"
+if [ -n "${1:-}" ]; then
+  [ -f "$1" ] || die "No such file: $1"
+  cp -- "$1" "$ARCH"; LABEL="$(basename "$1")"
+else
+  need_drive
+  mapfile -t rows < <(list_remote | head -n 15)
+  [ "${#rows[@]}" -gt 0 ] || die "There are no backups in your Google Drive folder '$BK_FOLDER' (that this sign-in can see)."
+  i=0
+  for r in "${rows[@]}"; do
+    i=$((i+1)); IFS='|' read -r when bytes name <<<"$r"
+    printf '  %2d)  %s  %6.0f MB  %s\n' "$i" "$when" "$((bytes/1048576))" "$name"
+  done
+  while :; do
+    n="$(ask "Number of the backup to restore (1 is the newest)" 1)"
+    case "$n" in ''|*[!0-9]*) ;; *) [ "$n" -ge 1 ] && [ "$n" -le "${#rows[@]}" ] && break ;; esac
+    warn "A number from the list, please."
+  done
+  IFS='|' read -r when bytes LABEL <<<"${rows[$((n-1))]}"
+  free_kb="$(df -Pk /var/tmp | awk 'NR==2 {print $4}')"
+  [ "$free_kb" -gt $(( bytes * 4 / 1024 + 524288 )) ] || die "Not enough free disk space to unpack it (needs about 4x its size)."
+  say "  Downloading $LABEL…"
+  rclone --config "$BK_CONF/rclone.conf" copyto "gdrive:$BK_FOLDER/$LABEL" "$ARCH" --retries 3 \
+    || die "The download failed (message above). Try again in a minute."
+fi
+ok "Got $LABEL ($(du -h "$ARCH" | cut -f1))"
+
+# 2. the passphrase: the one saved on this server first, else asked (it may have been a different one when this backup was made)
+unlocks() { [ "$(gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$1" -d "$ARCH" 2>/dev/null | head -c 4 | wc -c)" -eq 4 ]; }
+PASS="$WORK/pass"
+if [ -s "$BK_CONF/passphrase" ] && unlocks "$BK_CONF/passphrase"; then
+  cp "$BK_CONF/passphrase" "$PASS"; ok "Unlocked with the passphrase saved on this server"
+else
+  got=""
+  for _ in 1 2 3; do
+    p="$(read_hidden "The passphrase this backup was made with")"
+    printf '%s' "$p" > "$PASS"; p=""
+    if unlocks "$PASS"; then got=1; break; fi
+    warn "That passphrase doesn't open this backup."
+  done
+  [ -n "$got" ] || die "Couldn't unlock the backup; nothing was changed."
+  ok "Unlocked"
+fi
+
+say "  Unpacking (a minute)…"
+X="$WORK/x"; install -d -m 700 "$X"
+gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$PASS" -d "$ARCH" | tar -xzf - -C "$X"
+codes=("${PIPESTATUS[@]}")
+rm -f "$PASS" "$ARCH"
+if [ "${codes[0]}" != 0 ] || [ "${codes[1]}" != 0 ]; then die "The backup couldn't be unpacked (gpg ${codes[0]}, tar ${codes[1]}); nothing was changed."; fi
+[ -d "$X/data/.hermes" ] || die "This archive has no /data/.hermes in it; it isn't an agent-automation backup. Nothing was changed."
+
+# 3. the big question
+bowner="$(jq -r '.owner.name // empty' "$X/data/.hermes/crew.json" 2>/dev/null || true)"
+bagents="$(jq -r '[.agents[]?.name] | join(", ")' "$X/data/.hermes/crew.json" 2>/dev/null || true)"
+step "Ready to restore"
+say "  Backup:  ${B}$LABEL${N}${bowner:+ (owner: $bowner; agents: $bagents)}"
+say "  In it:   $(cd "$X" && for p in data/.hermes data/workspace data/tools; do [ -d "$p" ] && printf '/%s  ' "$p"; done)"
+say "           shared memory: $(find "$X/postgres" -name '*.dump' -printf '%f ' 2>/dev/null || true)  databases: $(find "$X/sqlite" -type f 2>/dev/null | wc -l) SQLite files"
+say
+say "  ${B}${Y}This puts your agents back to how they were in that backup.${N} Their settings, keys, memory, chats, board and your"
+say "  notebooks are replaced; anything newer than the backup is lost (a copy of what it replaces goes to $SAFE)."
+say "  The agents are offline for a minute or two, and any job they are running now is stopped."
+a="$(ask "Type RESTORE (capitals) to go ahead, anything else to stop" "")"
+[ "$a" = RESTORE ] || { say "  Stopped. Nothing was changed."; exit 0; }
+
+# 4. stop everything that writes there
+step "Restoring"
+install -d -m 700 "$SAFE"
+for s in hermes-gateway hermes-dash mem0-server; do systemctl stop "$s" 2>/dev/null || true; done
+if pgrep -u hermes -f 'hermes' >/dev/null 2>&1; then
+  pkill -TERM -u hermes -f 'hermes' 2>/dev/null || true; sleep 5; pkill -KILL -u hermes -f 'hermes' 2>/dev/null || true
+fi
+ok "Agents and memory server stopped"
+
+# 5. files: laid over the live folders; whatever they overwrite is kept in $SAFE
+for p in data/.hermes data/workspace data/tools; do
+  [ -d "$X/$p" ] || continue
+  install -d -m 700 "$SAFE/$p"
+  rsync -a --backup --backup-dir="$SAFE/$p" "$X/$p/" "/$p/"
+done
+# the SQLite copies over the live files; a -wal/-shm beside the target would spoil the restored database, so it goes to $SAFE too
+if [ -d "$X/sqlite" ]; then
+  while IFS= read -r -d '' f; do
+    rel="${f#"$X/sqlite"}"
+    for ext in "" -wal -shm -journal; do
+      if [ -e "$rel$ext" ]; then install -d -m 700 "$SAFE/sqlite$(dirname "$rel")"; mv -f "$rel$ext" "$SAFE/sqlite$rel$ext"; fi
+    done
+    [ -d "$(dirname "$rel")" ] || install -d -o hermes -g hermes -m 700 "$(dirname "$rel")"
+    cp --preserve=mode,ownership,timestamps "$f" "$rel"
+  done < <(find "$X/sqlite" -type f -print0)
+fi
+ok "Files back (what they replaced: $SAFE)"
+
+# 6. the shared memory's databases: today's saved to $SAFE first, then replaced by the backup's
+systemctl start postgresql 2>/dev/null || true
+for i in $(seq 1 20); do runuser -u postgres -- pg_isready -q && break; sleep 1; done
+install -d -m 700 "$SAFE/postgres"
+for db in mem0 mem0_app; do
+  [ -s "$X/postgres/$db.dump" ] || continue
+  if runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
+    runuser -u postgres -- pg_dump --format=custom "$db" > "$SAFE/postgres/$db.dump" || die "Couldn't save today's $db before replacing it; stopped (agents still off: sudo systemctl start mem0-server hermes-gateway)."
+  fi
+  runuser -u postgres -- dropdb --if-exists --force "$db"
+  runuser -u postgres -- createdb -O mem0 "$db"
+  if runuser -u postgres -- pg_restore -d "$db" < "$X/postgres/$db.dump" 2>"$SAFE/postgres/$db.restore.log"; then
+    rm -f "$SAFE/postgres/$db.restore.log"
+  else
+    warn "The memory database $db reported problems while restoring (log: $SAFE/postgres/$db.restore.log)."
+    note "The database as it was before is in $SAFE/postgres/$db.dump if you need it back."
+  fi
+done
+# The restored memory settings carry the database password from the backup: give the database user that password again.
+pw="$(env_get "$MEM0_ENV" POSTGRES_PASSWORD 2>/dev/null || true)"
+if [ -n "$pw" ]; then
+  printf "ALTER ROLE mem0 PASSWORD '%s';\n" "${pw//\'/\'\'}" | runuser -u postgres -- psql -q -v ON_ERROR_STOP=1 >/dev/null
+fi
+pw=""
+ok "Shared memory back"
+
+# 7. things that belong to this server, not to the backup
+dns="$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | sed 's/\.$//')"
+[ -n "$dns" ] && [ -s "$CREW_JSON" ] && cj_set '.dashboard_url' "$(jstr "https://$dns:8444/")"
+if [ "$(cj .features.backup)" = true ] && ! systemctl is-enabled --quiet crew-backup.timer 2>/dev/null; then
+  cj_set '.features.backup' false; BK_HINT=1
+fi
+
+# 8. start again
+printf '{"requested_at": %s, "via_service": true, "detached": false}' "$(date +%s)" | install -o hermes -g hermes -m 600 /dev/stdin "$HH/.restart_pending.json"
+systemctl start mem0-server || warn "the memory server didn't start: journalctl -u mem0-server -n 30"
+systemctl start hermes-gateway
+systemctl start hermes-dash 2>/dev/null || true
+up=""
+for i in $(seq 1 24); do
+  sleep 5
+  if systemctl is-active --quiet hermes-gateway && curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1; then up=1; break; fi
+done
+if [ -n "$up" ]; then ok "Agents back online"; else warn "The agents haven't answered yet: sudo crew-doctor (and journalctl -u hermes-gateway -n 40)"; fi
+
+say
+ok "Restored from $LABEL."
+say "  Check everything with: ${B}sudo crew-doctor${N} (if you made new Telegram bots since that backup, set their tokens with sudo crew-key)."
+say "  What the restore replaced is in $SAFE; once you're happy: ${B}sudo rm -rf $SAFE${N}"
+[ -z "${BK_HINT:-}" ] || say "  Nightly backups aren't set up on this server yet: ${B}sudo crew-addon backup${N}"

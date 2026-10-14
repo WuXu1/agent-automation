@@ -1,0 +1,10 @@
+[Unit]
+Description=Crew Command: quiet gateway restart asked for from the dashboard
+# At most three attempts in ten minutes, whatever the page does.
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/hermes-dash/restart-gateway.sh
+TimeoutStartSec=300

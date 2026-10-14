@@ -1,0 +1,13 @@
+# Installed by crew-addon-backup as /etc/systemd/system/crew-backup.service; started by crew-backup.timer.
+[Unit]
+Description=Encrypted backup of your agents to Google Drive (agent-automation)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/crew-backup
+Environment=HOME=/root
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=2h

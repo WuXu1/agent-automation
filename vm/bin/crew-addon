@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# crew-addon: optional extras, any time after the install.
+#   sudo crew-addon gmail      the chief and assistant can read your Gmail and write drafts (never send, delete or move)
+#   sudo crew-addon moodle     the tutor and assistant can read your university's Moodle (deadlines, courses, grades; never submit)
+#   sudo crew-addon backup     nightly encrypted backup to your Google Drive (docs/BACKUPS.md)
+#   sudo crew-addon <name> off switch one off again
+set -euo pipefail
+. /opt/agent-automation/vm/lib.sh
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+what="${1:-}"; off="${2:-}"
+
+apply() {  # write the settings for the new feature flags, then a quiet restart
+  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
+  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" skills >/dev/null
+  /usr/local/bin/crew-restart || warn "Agents busy; it takes effect at the next: sudo crew-restart"
+}
+
+case "$what" in
+  gmail)
+    if [ "$off" = off ]; then cj_set '.features.gmail' false; rm -f "$HH/owner/.secrets/gmail.env"; apply; ok "Gmail off (login removed)."; exit 0; fi
+    step "Gmail (read and draft only)"
+    say "  The agents read mail and save drafts in your Gmail Drafts folder; they have no code that can send, delete or move mail."
+    say "  Gmail needs an ${B}app password${N} (not your normal password). It needs 2-Step Verification switched on first:"
+    say "  https://myaccount.google.com/apppasswords → name it 'agents' → copy the 16 letters."
+    addr="$(ask "Your Gmail address" "")"
+    printf '%s' "$addr" | grep -Eq '^[^@[:space:]]+@(gmail|googlemail)\.com$' || die "That isn't a Gmail address. Nothing changed."
+    pw="$(ask_secret "App password (16 letters)")"
+    printf '%s' "$pw" | grep -Eq '^[a-z]{16}$' || die "An app password is 16 lowercase letters. Nothing changed."
+    install -d -o hermes -g hermes -m 700 "$HH/owner/.secrets"
+    printf 'GMAIL_ADDRESS=%s\nGMAIL_APP_PASSWORD=%s\n' "$addr" "$pw" | install -o hermes -g hermes -m 600 /dev/stdin "$HH/owner/.secrets/gmail.env"
+    pw=""
+    as_hermes python3 /data/tools/gmail/gmail_read.py check || die "Gmail refused the login (above). Check the address and make a new app password; then run this again."
+    cj_set '.features.gmail' true; apply
+    ok "Gmail on for $(cj '.agents[0].name') and $(cj '.agents[2].name')." ;;
+
+  moodle)
+    if [ "$off" = off ]; then cj_set '.features.moodle' false; apply; ok "Moodle off."; exit 0; fi
+    step "Moodle (read only)"
+    url="$(ask "Your Moodle's address (e.g. https://moodle.youruni.ac.uk)" "$(cj .moodle_url)")"
+    url="${url%/}"; printf '%s' "$url" | grep -Eq '^https://[A-Za-z0-9.-]+(/[A-Za-z0-9._/-]*)?$' || die "That isn't an https address."
+    cj_set '.moodle_url' "$(jstr "$url")"
+    if [ ! -x /data/tools/moodle/node_modules/.bin/moodle ]; then
+      if ! command -v node >/dev/null || [ "$(node -p 'process.versions.node.split(".")[0]')" -lt 20 ]; then
+        say "  Installing Node.js 22 (needed by the Moodle tool)…"
+        curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
+        DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l apt-get install -y -qq nodejs >/dev/null
+      fi
+      install -d -o hermes -g hermes -m 755 /data/tools/moodle
+      as_hermes bash -c 'cd /data/tools/moodle && npm install -s --ignore-scripts --omit=dev moodle-cli@0.9.6' >/dev/null
+    fi
+    say "  The agents use your Moodle login cookie (it lasts while it's used; a check every 30 minutes keeps it alive):"
+    say "   1. In a private browser window, log in to $url"
+    say "   2. Open developer tools (F12 or Cmd+Option+I) → Application (Chrome) / Storage (Firefox, Safari) → Cookies"
+    say "   3. Copy the value of ${B}MoodleSession${N}. 4. Close the window WITHOUT logging out."
+    tok="$(ask_secret "MoodleSession value")"
+    printf '%s' "$tok" | grep -Eq '^[A-Za-z0-9]{16,}$' || die "That doesn't look like a MoodleSession value. Nothing changed."
+    code="$(printf 'url = "%s/my/"\ncookie = "MoodleSession=%s"\n' "$url" "$tok" | curl -s -o /dev/null -w '%{http_code}' -m 30 -K - || true)"
+    [ "$code" = 200 ] || die "Moodle didn't accept it (answer $code). Log in again in a private window and copy it fresh."
+    for role in tutor assistant; do printf '%s\n' "$tok" | env_set "$(env_of "$role")" MOODLE_TOKEN; done
+    tok=""
+    # Keep-alive: a script-only job on the tutor (no AI, free), silent unless the session ended.
+    sd="$HH/profiles/tutor/scripts"; install -d -o hermes -g hermes -m 755 "$sd"
+    sed "s|@URL@|$url|" "$KIT/vm/tools/moodle/moodle-keepalive.sh" | install -o hermes -g hermes -m 755 /dev/stdin "$sd/moodle-keepalive.sh"
+    hermes_cli -p tutor cron list 2>/dev/null | grep -q "Moodle keep-alive" || \
+      hermes_cli -p tutor cron create "every 30m" --name "Moodle keep-alive" --script moodle-keepalive.sh --no-agent --deliver telegram >/dev/null || warn "couldn't add the keep-alive job"
+    cj_set '.features.moodle' true; apply
+    ok "Moodle on for $(cj '.agents[1].name') and $(cj '.agents[2].name'). When it says the session expired: sudo crew-addon moodle" ;;
+
+  backup)
+    [ -x "$KIT/vm/backup/crew-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (./crew update)."
+    exec bash "$KIT/vm/backup/crew-addon-backup" ${off:+--off} ;;
+
+  *) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

@@ -1,0 +1,85 @@
+diff --git a/hermes_cli/config_defaults.py b/hermes_cli/config_defaults.py
+index 7e1bed1cd19..987f47f1e6c 100644
+--- a/hermes_cli/config_defaults.py
++++ b/hermes_cli/config_defaults.py
+@@ -1293,6 +1293,12 @@ DEFAULT_CONFIG = {
+         # true = foreground writes prompt inline; background writes are staged (/memory
+         # pending|approve <id>|reject <id>). To disable memory: memory_enabled.
+         "write_approval": False,
++        # Let an UNATTENDED background-review fork apply its own memory consolidation
++        # (replace/remove) instead of staging it in /memory pending for a human. Default False
++        # keeps the fail-closed staging path. True suits an owner who never reads pending:
++        # without it, memory never consolidates. Every unattended write is snapshotted to
++        # <hermes home>/backups/memory/ first, so it stays reversible.
++        "allow_unattended_consolidation": False,
+         "memory_char_limit": 2200,   # ~800 tokens at 2.75 chars/token
+         "user_char_limit": 1375,     # ~500 tokens at 2.75 chars/token
+         # Periodic built-in memory review; 0 when an external provider auto-extracts.
+diff --git a/tools/memory_tool.py b/tools/memory_tool.py
+index 7577015e921..eccbaaf25c6 100644
+--- a/tools/memory_tool.py
++++ b/tools/memory_tool.py
+@@ -163,6 +163,42 @@ def destructive_ops(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+     return [op for op in ops if (op or {}).get("action") in _BG_DELETE_ACTIONS]
+ 
+ 
++def _unattended_consolidation_allowed() -> bool:
++    """Operator opt-in: let an unattended review fork apply ``replace``/``remove`` directly.
++
++    Default False keeps the fail-closed staging path. Reads the per-profile config key
++    ``memory.allow_unattended_consolidation``. Turning it on trades the human approval
++    round-trip for an unattended model rewriting memory entries, so every applied op is
++    snapshotted first by :func:`_snapshot_memory_before_unattended_write` — when nobody
++    reviews the staged proposals, the pre-write file is the only recovery path.
++    """
++    try:
++        from hermes_cli.config import cfg_get, load_config
++        return is_truthy_value(
++            cfg_get(load_config(), "memory", "allow_unattended_consolidation", default=False)
++        )
++    except Exception:
++        logger.warning("Could not read memory.allow_unattended_consolidation; staging instead", exc_info=True)
++        return False
++
++
++def _snapshot_memory_before_unattended_write(store, target: str) -> None:
++    """Copy the store file aside (newest 100 snapshots kept) before an unattended write."""
++    try:
++        import shutil
++        import time
++        src = store._path_for(target)
++        if src is None or not src.exists():
++            return
++        dest_dir = get_hermes_home() / "backups" / "memory"
++        dest_dir.mkdir(parents=True, exist_ok=True)
++        shutil.copy2(src, dest_dir / f"{src.name}.{time.strftime('%Y%m%d-%H%M%S')}.bak")
++        for stale in sorted(dest_dir.glob("*.bak"))[:-100]:
++            stale.unlink(missing_ok=True)
++    except Exception:
++        logger.warning("Memory snapshot before unattended write failed", exc_info=True)
++
++
+ def _background_delete_gate(store, action, operations, target="memory", content=None,
+                             old_text=None) -> Optional[str]:
+     """Fail-closed operation gate for unattended background-review forks (#105921): ``add``
+@@ -170,11 +206,19 @@ def _background_delete_gate(store, action, operations, target="memory", content=
+     single or inside a batch — are never applied unattended. The op is staged in the pending
+     store instead of merely denied: the fork's own review summary is never published back, so
+     a plain denial would drop the consolidation request with no surfacing path at all. A
+-    staging failure fails closed to a plain denial."""
++    staging failure fails closed to a plain denial.
++
++    The staging round-trip can be opted out of with ``memory.allow_unattended_consolidation``
++    (see :func:`_unattended_consolidation_allowed`), for a deployment whose owner does not
++    read /memory pending — memory would otherwise never consolidate. The write is snapshotted
++    to ``<hermes home>/backups/memory/`` either way, so it stays reversible."""
+     from tools.skill_provenance import is_unattended_review
+ 
+     if not is_unattended_review():
+         return None
++    if _unattended_consolidation_allowed():
++        _snapshot_memory_before_unattended_write(store, target)
++        return None
+     payload = ({"action": "batch", "target": target, "operations": operations}
+                if operations is not None else
+                {"action": action, "target": target, "content": content, "old_text": old_text})

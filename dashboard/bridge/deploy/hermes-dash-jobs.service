@@ -1,0 +1,28 @@
+[Unit]
+Description=Crew Command: run the dashboard's network jobs (jobs.py: a fixed list, each checked)
+After=network-online.target
+Wants=network-online.target
+# The path unit starts this once per new request; a flood of requests cannot make it spin.
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+[Service]
+Type=oneshot
+User=hermes
+Group=hermes
+WorkingDirectory=/data/tools/hermes-dash
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -I /data/tools/hermes-dash/jobs.py --config /data/.hermes/hermes-dash/config.json
+TimeoutStartSec=600
+# Unlike the bridge it may reach the internet (DeepSeek, Gemini, Telegram, the skills hub, the add-ons), but only from these jobs.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryHigh=384M
+MemoryMax=512M

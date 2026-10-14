@@ -1,0 +1,68 @@
+{
+  "about": "What the dashboard knows about this install that it cannot read from the VM: names, who uses what, where secrets live, ports. Agents are named by their Hermes profile (default = the chief); the bridge turns profiles into the names in crew.json. Anything on the VM that is not described here still shows up (as 'found, not described yet'). Items with a 'feature' are optional add-ons: they show as off until crew.json switches that feature on.",
+  "integrations": [
+    {"id": "deepseek", "name": "DeepSeek", "kind": "API key (required)", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["DEEPSEEK_API_KEY"],
+     "secret": "/data/.hermes/.env and each profile's .env (DEEPSEEK_API_KEY)", "fix": "top up at platform.deepseek.com, or paste a new key with: ./crew key deepseek",
+     "note": "the agents' model (deepseek-flash), pay as you go", "check": "builtin"},
+    {"id": "gemini", "name": "Gemini", "kind": "API key (optional fallback)", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["GEMINI_API_KEY"],
+     "secret": "/data/.hermes/.env (GEMINI_API_KEY)", "fix": "a free key at aistudio.google.com/apikey",
+     "note": "used only when DeepSeek is down, and as a model choice for the dashboard's own AI jobs", "check": "builtin"},
+    {"id": "telegram", "name": "Telegram", "kind": "bot tokens, one per agent (four bots)", "usedBy": ["default", "tutor", "assistant", "coach"],
+     "keys": ["TELEGRAM_BOT_TOKEN", "TELEGRAM_ALLOWED_USERS", "TELEGRAM_HOME_CHANNEL"],
+     "secret": "/data/.hermes/.env and each profile's .env (TELEGRAM_BOT_TOKEN)", "fix": "a new token from @BotFather, typed into that agent's .env, then a quiet restart", "check": "builtin"},
+    {"id": "mem0", "name": "Mem0 (memory)", "kind": "runs on the VM", "usedBy": ["default", "tutor", "assistant", "coach"], "service": "mem0-server",
+     "keys": ["MEM0_API_KEY", "MEM0_HOST", "MEM0_USER_ID", "MEM0_AGENT_ID"],
+     "secret": "/data/.hermes/mem0-server/server.env and each profile's .env (MEM0_API_KEY)", "fix": "sudo systemctl status mem0-server on the VM", "check": "service"},
+    {"id": "weather", "name": "Open-Meteo weather", "kind": "free, no key", "usedBy": ["default", "assistant", "coach"], "keys": [],
+     "secret": "no secret", "fix": "nothing to renew", "note": "forecasts only", "check": "free"},
+    {"id": "openalex", "name": "OpenAlex", "kind": "Hermes plugin, no key", "usedBy": ["tutor"], "plugin": "openalex", "keys": [],
+     "secret": "no secret", "fix": "hermes -p tutor plugins install openalex on the VM", "check": "plugin"},
+    {"id": "gmail", "name": "Gmail", "kind": "IMAP app password (add-on)", "feature": "gmail", "usedBy": ["default", "assistant"], "keys": ["GMAIL_ADDRESS", "GMAIL_APP_PASSWORD"],
+     "secret": "/data/.hermes/owner/.secrets/gmail.env", "fix": "a new app password at myaccount.google.com/apppasswords, typed in with: ./crew addon gmail",
+     "enable": "switch it on with: ./crew addon gmail", "check": "builtin"},
+    {"id": "moodle", "name": "Moodle", "kind": "session cookie, moodle-cli (add-on)", "feature": "moodle", "usedBy": ["tutor", "assistant"], "mcp": ["moodle"],
+     "keys": ["MOODLE_TOKEN", "MOODLE_BASE_URL", "MOODLE_NO_UPDATE_CHECK"],
+     "secret": "the tutor's and assistant's .env (MOODLE_TOKEN)", "fix": "copy a fresh MoodleSession cookie from your browser and type it in with: ./crew addon moodle",
+     "enable": "switch it on with: ./crew addon moodle", "check": "builtin"},
+    {"id": "elevenlabs", "name": "ElevenLabs (voice replies)", "kind": "API key (add-on)", "feature": "voice", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["ELEVENLABS_API_KEY"],
+     "secret": "each agent's .env (ELEVENLABS_API_KEY)", "fix": "a new key at elevenlabs.io, typed in with: ./crew key elevenlabs", "enable": "switch it on with: ./crew voice", "check": "builtin"},
+    {"id": "drive", "name": "Google Drive (backups)", "kind": "rclone OAuth token (add-on)", "feature": "backup", "usedBy": [], "keys": [],
+     "secret": "/etc/crew-backup/rclone.conf (root only)", "fix": "sign rclone in again: ./crew backup-login, then ./crew addon backup",
+     "enable": "switch it on with: ./crew addon backup (docs/BACKUPS.md)", "check": "builtin"}
+  ],
+  "ignoreKeys": ["API_SERVER_*", "LLM_MODEL"],
+  "tools": [
+    {"key": "kanban", "label": "Board", "who": ["default"], "rule": "the chief creates and hands out cards"},
+    {"key": "weather", "label": "Weather", "who": ["default", "assistant", "coach"], "rule": "forecasts only"},
+    {"key": "openalex", "label": "Paper search", "who": ["tutor"], "rule": "OpenAlex, read only"},
+    {"key": "gmail", "label": "Gmail (add-on)", "who": ["default", "assistant"], "rule": "read and draft; never sends without your yes"},
+    {"key": "icloud", "label": "iCloud calendar (add-on)", "who": ["tutor", "assistant"], "rule": "the tutor reads; the assistant writes"}
+  ],
+  "mcp": {
+    "moodle": "one session cookie; renew it when it expires",
+    "openalex": "search for papers"
+  },
+  "roles": {},
+  "teams": [
+    {"id": "crew", "label": "Specialists", "members": ["tutor", "assistant", "coach"], "note": "one specialist each; the chief hands them cards"}
+  ],
+  "services": [
+    {"unit": "hermes-gateway", "label": "Agents: Telegram and the API", "port": 8642},
+    {"unit": "mem0-server", "label": "Memory (Mem0)", "port": 8888},
+    {"unit": "postgresql", "label": "Mem0's database", "port": 5432},
+    {"unit": "hermes-dash", "label": "This dashboard", "port": 8890},
+    {"unit": "tailscaled", "label": "Tailscale (private network)"}
+  ],
+  "ignoreUnits": ["hermes-dash-*"],
+  "timers": [
+    {"unit": "hermes-backup", "label": "Nightly backup to Google Drive, encrypted (backup add-on)"}
+  ],
+  "suggestions": [
+    {"catalog": "wolfram", "name": "Wolfram|Alpha", "for": ["tutor"], "why": "the tutor can check maths, physics and stats working step by step", "cost": "free"},
+    {"catalog": "strava", "name": "Strava", "for": ["coach"], "why": "the coach sees your runs, rides and training load (read only)", "cost": "free · one Strava sign-in"},
+    {"catalog": "alltrails", "name": "AllTrails", "for": ["coach"], "why": "the coach can plan weekend walks and hikes near you", "cost": "free"},
+    {"catalog": "kiwi", "name": "Kiwi.com flights", "for": ["assistant"], "why": "the assistant finds cheap flights and links you to book yourself", "cost": "free"},
+    {"catalog": "todoist", "name": "Todoist", "for": ["assistant"], "why": "if you keep a to-do list there, the assistant can read and add tasks", "cost": "free plan · one Todoist sign-in"},
+    {"catalog": "indeed", "name": "Indeed", "for": ["assistant"], "why": "the assistant can look for part-time jobs and internships", "cost": "free · one Indeed sign-in"}
+  ]
+}

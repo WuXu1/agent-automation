@@ -1,0 +1,348 @@
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index d938cdc793c..12a3a6c5162 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -4091,19 +4091,48 @@ class BasePlatformAdapter(ABC):
+                 if tts_data.get("success", True):
+                     raw_tts_paths = tts_data.get("file_paths") or [tts_data.get("file_path")]
+                     paths = [str(path) for path in raw_tts_paths if path and Path(path).exists()]
++                else:
++                    logger.warning("[%s] Auto-TTS returned no audio: %s", self.name,
++                                   tts_data.get("error"))
++            else:
++                # A closed requirement gate used to no-op in total silence here: the turn then
++                # delivered text only, with nothing in the log to explain the missing voice note.
++                logger.warning(
++                    "[%s] Auto-TTS unavailable (check_tts_requirements() is False for this "
++                    "profile): the voice reply is skipped and only text is sent", self.name)
+         except Exception as tts_err:
+             logger.warning("[%s] Auto-TTS failed: %s", self.name, tts_err)
++        if requested_path and not paths:
++            # Only when a synthesis was actually attempted: the gate-closed branch above already
++            # reported its own reason, and double-warning there was pure noise.
++            logger.warning("[%s] Auto-TTS produced no usable audio file (%s)", self.name, requested_path)
+         return paths, requested_path
+ 
+     def _wants_auto_tts(self, event: MessageEvent, session_key: str, interrupt_event: asyncio.Event,
+                         text_content: str, media_files: list) -> bool:
+         """Auto-TTS on voice input (voice-first), gated by /voice or voice.auto_tts;
+-        skipped when streaming TTS already delivered audio this turn."""
++        skipped when streaming TTS already delivered audio this turn.
++
++        The decision is logged at INFO, once per turn, naming the condition that blocked it: a
++        shut gate used to leave a voice-note turn with text only and nothing in the log to say
++        why, which is unreadable at INFO because this reason used to be DEBUG (#voice-notes)."""
+         generation = getattr(interrupt_event, "_hermes_run_generation", None)
+-        return bool(
+-            self._should_auto_tts_for_chat(event.source.chat_id)
+-            and event.message_type == MessageType.VOICE and text_content and not media_files
+-            and not self._streaming_tts_turn_completed(session_key, generation, event=event))
++        enabled = self._should_auto_tts_for_chat(event.source.chat_id)
++        is_voice_input = event.message_type == MessageType.VOICE
++        has_text = bool(text_content)
++        streaming_done = self._streaming_tts_turn_completed(session_key, generation, event=event)
++        wants = bool(enabled and is_voice_input and has_text and not media_files
++                     and not streaming_done)
++        if wants:
++            logger.info("[%s] Auto-TTS fired: chat=%s voice_input=yes text=%d chars",
++                        self.name, event.source.chat_id, len(text_content or ""))
++        else:
++            logger.info(
++                "[%s] Auto-TTS skipped: chat=%s enabled=%s voice_input=%s text_chars=%d "
++                "media_files=%d streaming_tts_done=%s",
++                self.name, event.source.chat_id, enabled, is_voice_input,
++                len(text_content or ""), len(media_files or []), streaming_done)
++        return wants
+ 
+     async def _play_tts_file(
+         self, event: MessageEvent, text_content: str, tts_path: str, first: bool,
+diff --git a/gateway/run_turn.py b/gateway/run_turn.py
+index 1484ea2059d..7f6b5e29df7 100644
+--- a/gateway/run_turn.py
++++ b/gateway/run_turn.py
+@@ -1934,13 +1934,16 @@ class GatewayTurnMixin:
+             response = ""
+ 
+         adapter = self._delivery_adapter_for(source)
+-        # Auto voice reply (TTS audio before the text) unless streaming TTS already delivered audio.
++        # Auto voice reply (TTS audio before the text) unless streaming TTS already delivered audio
++        # or the queued-follow-up lane already sent this reply's voice note.
+         _streaming_tts_done = adapter is not None and bool(
+             getattr(adapter, "_streaming_tts_turn_completed", lambda *_a, **_k: False)(session_key, run_generation)
+         )
+-        if not _streaming_tts_done and self._should_send_voice_reply(
+-            event, response, agent_messages, already_sent=bool(agent_result.get("already_sent")),
+-        ):
++        if (not _streaming_tts_done and not agent_result.get("voice_already_delivered")
++                and self._should_send_voice_reply(
++                    event, response, agent_messages,
++                    already_sent=bool(agent_result.get("already_sent")),
++                )):
+             await self._send_voice_reply(event, response)
+ 
+         # Streamed responses still need MEDIA: files delivered (chunks carry the tags verbatim). Never
+@@ -3702,8 +3705,14 @@ class GatewayTurnMixin:
+ 
+     async def _run_agent_deliver_first_response(
+         self, turn_ctx: TurnContext, adapter: Any, response: Any, result: Any, stream_task: Any,
++        message_type: Any = None,
+     ) -> None:
+-        """Deliver the first response before a queued follow-up runs, unless streaming already did."""
++        """Deliver the first response before a queued follow-up runs, unless streaming already did.
++
++        ``message_type`` is the ended turn's inbound type, carried in from ``_run_agent_inner``: the
++        voice-reply gate needs it (with the source) to rebuild the turn's event, because this lane
++        never sees the original ``MessageEvent``.
++        """
+         if turn_ctx.mute_notification_reply:
+             return
+         session_key = turn_ctx.session_key
+@@ -3736,6 +3745,34 @@ class GatewayTurnMixin:
+                 _already_streamed = False
+         # Failed turns deliver their text but never their attachments (completed-turn parity).
+         _deliver_media = not _delivery_result.get("failed")
++        # Auto voice reply, exactly as the completion path does it. This lane sends the finalized
++        # text and its MEDIA tags itself and never reaches the base adapter's auto-TTS block
++        # (`_process_message_background`), so a voice-note turn that ended with a pending follow-up
++        # used to answer in text alone — the "Cached user voice …" then plain "Sending response"
++        # pair with no audio in between (#voice-notes). The gate declines when the reply carries its
++        # own audio and when the chat's voice mode does not cover the turn; `adapter_can_speak`
++        # False is this lane's own fact (the adapter will not speak this response), and the
++        # streaming-TTS check keeps a turn that was already spoken while streaming from being
++        # spoken again. Note first, text after — the normal lane's order.
++        if first_response and _deliver_media:
++            from gateway.run_voice import queued_voice_event
++            try:
++                _voice_event = queued_voice_event(turn_ctx, message_type)
++                _streaming_tts_done = bool(
++                    getattr(adapter, "_streaming_tts_turn_completed", lambda *_a, **_k: False)(
++                        session_key, turn_ctx.run_generation))
++                if (_voice_event is not None and not _streaming_tts_done
++                        and self._should_send_voice_reply(
++                            _voice_event, first_response, _delivery_result.get("messages") or [],
++                            already_sent=_already_streamed, adapter_can_speak=False)):
++                    await self._send_voice_reply(_voice_event, first_response)
++                    if isinstance(result, dict):
++                        # Mirror `media_already_delivered`: an early `return result` after this
++                        # point (refused follow-up, stale goal) reaches the completion path, which
++                        # would speak the same text a second time without this marker.
++                        result["voice_already_delivered"] = True
++            except Exception as e:  # audio is best-effort: never cost the user the text
++                logger.warning("Auto voice reply on the queued lane failed: %s", e, exc_info=True)
+         if first_response:
+             logger.info(
+                 "Queued follow-up for session %s: final text delivery confirmed; delivering explicit media before continuing."
+@@ -3777,7 +3814,7 @@ class GatewayTurnMixin:
+ 
+     async def _run_agent_queued_followup(
+         self, turn_ctx: TurnContext, adapter: Any, pending: Optional[str], pending_event: Any,
+-        response: Any, result: Any, stream_task: Any,
++        response: Any, result: Any, stream_task: Any, message_type: Any = None,
+     ) -> Any:
+         """Run the queued / interrupting follow-up as the next turn (recursive ``_run_agent``)."""
+         from gateway.platforms.base import merge_pending_message_event
+@@ -3811,7 +3848,8 @@ class GatewayTurnMixin:
+ 
+         # Interrupted: discard the response ("Operation interrupted." is noise).
+         if not result.get("interrupted"):
+-            await self._run_agent_deliver_first_response(turn_ctx, adapter, response, result, stream_task)
++            await self._run_agent_deliver_first_response(
++                turn_ctx, adapter, response, result, stream_task, message_type=message_type)
+ 
+         updated_history = result.get("messages", history)
+         next_source, next_message, next_session_key = source, pending, session_key
+@@ -4304,6 +4342,7 @@ class GatewayTurnMixin:
+             if pending_event or pending:
+                 return await self._run_agent_queued_followup(
+                     turn_ctx, adapter, pending, pending_event, response, result, stream_task,
++                    message_type=message_type,
+                 )
+         finally:
+             await self._run_agent_cleanup_turn_tasks(
+diff --git a/gateway/run_voice.py b/gateway/run_voice.py
+index 58d45bc00ff..e819a3dc1c5 100644
+--- a/gateway/run_voice.py
++++ b/gateway/run_voice.py
+@@ -28,6 +28,103 @@ logger = logging.getLogger("gateway.run")  # log-record parity with the origin m
+ # Adapter-side per-chat auto-TTS override sets (``/voice off`` vs explicit ``/voice on``/``tts``).
+ _OFF_SET, _ON_SET = "_auto_tts_disabled_chats", "_auto_tts_enabled_chats"
+ _VOICE_MODES = {"off", "voice_only", "all"}
++# A reply's own attachment directive (``MEDIA:<path>``) and the tag that marks it as a voice note.
++# Path forms mirror the delivery parser in ``gateway.platforms.base`` (quoted or bare, absolute or
++# remote — a relative ``MEDIA:file.mp3`` is prose the pipeline never delivers).
++_MEDIA_TAG_PATH_RE = re.compile(
++    r"""MEDIA:\s*(?P<quoted>`[^`\n]+?`|"[^"\n]+?"|'[^'\n]+?'|(?P<bare>\S+))""")
++_AUDIO_EXT_FALLBACK = frozenset(
++    {".ogg", ".opus", ".oga", ".mp3", ".m4a", ".wav", ".flac", ".aac"})
++_TTS_TOOL_NAME = "text_to_speech"
++
++
++def _media_tag_paths(response: str) -> list:
++    """Paths a reply attaches with ``MEDIA:`` tags, in tag order, dequoted."""
++    text = str(response or "")
++    if "MEDIA:" not in text:
++        return []
++    paths = []
++    for m in _MEDIA_TAG_PATH_RE.finditer(text):
++        raw = (m.group("quoted") or m.group("bare") or "").strip()
++        if raw[:1] in ("`", '"', "'") and raw[-1:] == raw[:1]:
++            raw = raw[1:-1]
++        path = raw.strip().strip("<>").rstrip(",;.")
++        if path:
++            paths.append(path)
++    return paths
++
++
++def _deliverable_path(path: str) -> bool:
++    """True for the path forms the delivery pipeline actually sends (absolute or remote)."""
++    lowered = path.lower()
++    return bool(
++        lowered.startswith(("/", "~/", "http://", "https://"))
++        or re.match(r"^[a-z]:[/\\]", lowered)
++    )
++
++
++def _reply_attaches_own_audio(response: str, platform) -> bool:
++    """True when the reply attaches its own audio file with a ``MEDIA:`` tag — the agent's own
++    voice note, whether it came from ``text_to_speech`` or from any other tool. Used to tell
++    "this reply already has audio" (deliver it, add nothing) from "the agent merely called the
++    TTS tool" (it may have failed, so the automatic note must still be sent).
++
++    Any audio extension counts, not just the ones the platform would send as a voice bubble: on
++    Telegram a bare ``.ogg``/``.opus`` goes out as an audio document, and treating that as "no
++    audio here" would answer with a second, spoken copy of the same reply."""
++    is_voice_tag = "[[audio_as_voice]]" in str(response or "")
++    for path in _media_tag_paths(response):
++        if not _deliverable_path(path):
++            continue
++        ext = os.path.splitext(path)[1].lower()
++        if ext in _AUDIO_EXT_FALLBACK or _ext_is_platform_audio(platform, ext, is_voice_tag):
++            return True
++    return False
++
++
++def _ext_is_platform_audio(platform, ext: str, is_voice: bool) -> bool:
++    """``should_send_media_as_audio`` without the import cycle, defaulting to False."""
++    try:
++        from gateway.platforms.base import should_send_media_as_audio
++        return bool(should_send_media_as_audio(platform, ext, is_voice=is_voice))
++    except Exception:
++        return False
++
++
++def _reply_attaches_media(response: str) -> bool:
++    """True when the reply attaches any file with a ``MEDIA:`` tag. The adapter's auto-TTS gate
++    skips a reply that carries media (``not media_files``), so a deferral to it is only honest
++    when the reply carries none."""
++    return any(_deliverable_path(p) for p in _media_tag_paths(response))
++
++
++def _count_tts_tool_calls(agent_messages: list) -> int:
++    """``text_to_speech`` calls in this turn (counted from the last user message on). Diagnostic
++    only — the deferral decision reads the reply's own attachment, never the bare call."""
++    messages = agent_messages or []
++    start = next((i for i, m in reversed(list(enumerate(messages)))
++                  if isinstance(m, dict) and m.get("role") == "user"), 0)
++    return sum(1 for msg in messages[start:]
++               if isinstance(msg, dict) and msg.get("role") == "assistant"
++               for tc in (msg.get("tool_calls") or [])
++               if ((tc or {}).get("function") or {}).get("name") == _TTS_TOOL_NAME)
++
++
++def queued_voice_event(turn_ctx, message_type):
++    """Rebuild a turn's inbound event for the queued-delivery lane, which carries only the source
++    and the turn's message type — enough for both voice gates, which read no other event field.
++    Returns None when there is no source to deliver to."""
++    from gateway.platforms.event import MessageEvent, MessageType
++    source = getattr(turn_ctx, "source", None)
++    if source is None:
++        return None
++    raw = getattr(message_type, "value", message_type)
++    try:
++        mtype = MessageType(str(raw).lower()) if raw else MessageType.TEXT
++    except Exception:  # unknown value: not voice input, so the mode gate decides alone
++        mtype = MessageType.TEXT
++    return MessageEvent(text="", source=source, message_type=mtype,
++                        message_id=getattr(turn_ctx, "event_message_id", None))
+ 
+ 
+ class GatewayVoiceMixin:
+@@ -289,11 +386,20 @@ class GatewayVoiceMixin:
+         await adapter.handle_message(event)
+ 
+     def _should_send_voice_reply(
+-        self, event: MessageEvent, response: str, agent_messages: list, already_sent: bool = False
++        self, event: MessageEvent, response: str, agent_messages: list, already_sent: bool = False,
++        adapter_can_speak: bool = True,
+     ) -> bool:
+-        """False when voice_mode is off for this chat, the response is empty/an error, the agent
+-        already called text_to_speech this turn, or voice input + base adapter auto-TTS handled it
+-        — UNLESS streaming consumed the response (already_sent): then the runner must do it."""
++        """False when voice_mode is off for this chat, the response is empty/an error, the reply
++        carries its own audio attachment, or voice input + base adapter auto-TTS handled it —
++        UNLESS streaming consumed the response (already_sent): then the runner must do it.
++
++        ``adapter_can_speak`` is False on the queued-follow-up lane, which delivers the reply
++        itself: the adapter's auto-TTS only runs for a response returned by the message handler
++        (`_process_message_background`), and there the queued lane's response reads as already
++        sent — so deferring to it there is deferring to nothing.
++
++        Every decision is logged at INFO with the values behind it: a text-only answer to a voice
++        note used to be silent here (DEBUG / no line at all), which made the gate unreadable."""
+         if not response or response.startswith("Error:"):
+             return False
+         chat_id = event.source.chat_id
+@@ -303,24 +409,40 @@ class GatewayVoiceMixin:
+         adapter_auto_tts = False
+         with suppress(Exception):  # adapters without the probe read as False
+             adapter_auto_tts = bool(adapter._should_auto_tts_for_chat(chat_id))
++        # Dedup: the reply already carries the agent's OWN voice note — a MEDIA: tag on an audio
++        # file — and that IS this turn's audio; a second one would double it. Keyed on the
++        # attachment in THIS reply, not on a text_to_speech call: a call that failed (missing
++        # profile key, quota, an unwritable path) returns no MEDIA tag, and treating the bare call
++        # as "audio already handled" answered the voice note with text alone while the automatic
++        # path stood down for the same turn (#voice-notes).
++        if _reply_attaches_own_audio(response, event.source.platform):
++            logger.info(
++                "Auto voice reply skipped: the reply carries its own audio attachment "
++                "(chat=%s platform=%s)", chat_id, event.source.platform.value)
++            return False
+         # ``voice.auto_tts`` (synced into the adapter at startup) is the fallback only when the
+         # chat has no explicit mode; the chat-level all/voice_only/off choice takes precedence.
+         if not (voice_mode == "all" or (voice_mode == "voice_only" and is_voice_input)
+                 or (voice_mode is None and adapter_auto_tts)):
+-            logger.debug(
+-                "Auto voice reply skipped: mode=%s adapter_auto_tts=%s chat=%s platform=%s",
+-                voice_mode, adapter_auto_tts, chat_id, event.source.platform.value)
+-            return False
+-        # Dedup: agent already called the TTS tool in THIS turn (from the last user message on).
+-        start = next((i for i, m in reversed(list(enumerate(agent_messages)))
+-                      if m.get("role") == "user"), 0)
+-        if any((tc.get("function") or {}).get("name") == "text_to_speech"
+-               for msg in agent_messages[start:] if msg.get("role") == "assistant"
+-               for tc in (msg.get("tool_calls") or [])):
++            logger.info(
++                "Auto voice reply skipped: voice_mode=%s adapter_auto_tts=%s voice_input=%s "
++                "chat=%s platform=%s",
++                voice_mode, adapter_auto_tts, is_voice_input, chat_id, event.source.platform.value)
+             return False
+-        # Dedup: base adapter auto-TTS already handles voice input (play_tts plays in VC when
+-        # connected) — unless streaming consumed the text (already_sent): then the runner must.
+-        return not (is_voice_input and not already_sent)
++        # Dedup: the base adapter's auto-TTS covers voice input only while the chat is in ITS
++        # enabled set (`_should_auto_tts_for_chat`, filled from gateway_voice_mode.json at connect
++        # time) AND the reply carries no media at all (`_wants_auto_tts` requires ``not
++        # media_files``). Defer only when it will genuinely fire: a stale set, a pending-follow-up
++        # delivery lane, or an attached image otherwise answers a voice note with text and no audio.
++        base_handles_voice = bool(adapter_can_speak and is_voice_input and not already_sent
++                                  and adapter_auto_tts and not _reply_attaches_media(response))
++        logger.info(
++            "Auto voice reply %s: chat=%s platform=%s voice_mode=%s voice_input=%s "
++            "already_sent=%s adapter_auto_tts=%s adapter_can_speak=%s tts_tool_calls=%d",
++            "deferred to the adapter's auto-TTS" if base_handles_voice else "sent by the runner",
++            chat_id, event.source.platform.value, voice_mode, is_voice_input, already_sent,
++            adapter_auto_tts, adapter_can_speak, _count_tts_tool_calls(agent_messages))
++        return not base_handles_voice
+ 
+     def _should_echo_stt_transcripts(self) -> bool:
+         return bool(getattr(self.config, "stt_echo_transcripts", True))

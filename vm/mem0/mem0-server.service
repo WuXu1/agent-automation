@@ -1,0 +1,22 @@
+[Unit]
+Description=Mem0 memory server for the agents (agent-automation vm/mem0)
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+User=hermes
+Group=hermes
+WorkingDirectory=/data/tools/mem0-src/server
+EnvironmentFile=/data/.hermes/mem0-server/server.env
+Environment=PYTHONUNBUFFERED=1 HF_HOME=/data/tools/mem0-cache/hf FASTEMBED_CACHE_PATH=/data/tools/mem0-cache/fastembed
+ExecStartPre=/data/tools/mem0-venv/bin/alembic upgrade head
+ExecStart=/data/tools/mem0-venv/bin/uvicorn main:app --host 127.0.0.1 --port 8888
+Restart=on-failure
+RestartSec=10
+Nice=10
+MemoryHigh=700M
+MemoryMax=1000M
+
+[Install]
+WantedBy=multi-user.target

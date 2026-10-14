@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# crew-doctor: is everything working? Plain-English checks, nothing is changed. Run on the server:  sudo crew-doctor
+set -uo pipefail
+. /opt/agent-automation/vm/lib.sh
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+fail=0
+bad() { printf '%s  ✗ %s%s\n' "$R" "$*" "$N"; fail=$((fail+1)); }
+
+say "${B}Health check${N} ($(date '+%a %d %b %H:%M'))"
+for s in hermes-gateway mem0-server postgresql hermes-dash tailscaled; do
+  if systemctl is-active --quiet "$s"; then ok "$s running"
+  else case "$s" in hermes-dash) warn "$s (the dashboard) is not running: ./crew update reinstalls it" ;; *) bad "$s is not running: sudo systemctl restart $s ; journalctl -u $s -n 30" ;; esac; fi
+done
+
+curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1 && ok "agents' local API answers" || bad "the agents' local API doesn't answer (gateway starting or stuck)"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -m 3 http://127.0.0.1:8888/docs)" = 200 ] && ok "memory server answers" || bad "memory server doesn't answer"
+
+# Each bot: is its token still valid?
+i=0
+for role in $ROLES; do
+  name="$(cj ".agents[$i].name")"; i=$((i+1))
+  tok="$(env_get "$(env_of "$role")" TELEGRAM_BOT_TOKEN)"
+  if [ -z "$tok" ]; then bad "$name has no Telegram bot token: run the installer again"; continue; fi
+  u="$(printf 'url = "https://api.telegram.org/bot%s/getMe"\n' "$tok" | curl -s -m 10 -K - | jq -r '.result.username // empty')"
+  [ -n "$u" ] && ok "$name's bot @$u is valid" || bad "$name's bot token was refused by Telegram (revoked?): sudo crew-key telegram-$role"
+  tok=""
+done
+
+# DeepSeek balance (the only running cost besides Azure)
+k="$(env_get "$(env_of chief)" DEEPSEEK_API_KEY)"
+if [ -n "$k" ]; then
+  bal="$(printf 'url = "https://api.deepseek.com/user/balance"\nheader = "Authorization: Bearer %s"\n' "$k" | curl -s -m 10 -K - \
+        | jq -r '.balance_infos[0] | "\(.total_balance) \(.currency)"' 2>/dev/null)"
+  case "$bal" in ""|null*) bad "DeepSeek didn't answer the balance check (key revoked?)" ;;
+    *) amt="${bal%% *}"; if awk "BEGIN{exit !($amt < 1)}"; then warn "DeepSeek balance is low: $bal (top up at platform.deepseek.com)"; else ok "DeepSeek balance $bal"; fi ;; esac
+fi
+k=""
+
+# Machine
+mem="$(free -m | awk '/^Mem:/{print $7}')"; disk="$(df -P / | awk 'NR==2{print $5}' | tr -d %)"
+[ "${mem:-0}" -gt 300 ] && ok "memory free: ${mem} MB" || warn "memory is tight: ${mem} MB free"
+[ "${disk:-0}" -lt 85 ] && ok "disk ${disk}% used" || warn "disk ${disk}% used: clear old files (README → Troubleshooting)"
+exp="$(tailscale status --json 2>/dev/null | jq -r '.Self.KeyExpiry // empty')"
+if [ -n "$exp" ]; then warn "Tailscale key expires $exp: disable key expiry for this server at https://login.tailscale.com/admin/machines"
+else ok "Tailscale key never expires"; fi
+days="$(( ( $(date +%s) - $(date -d "$(cj .installed_at || date +%F)" +%s 2>/dev/null || date +%s) ) / 86400 ))"
+note "Server installed $days days ago: about \$$(awk "BEGIN{printf \"%.0f\", $days*1.25}") of Azure credit used (check: https://www.microsoftazuresponsorships.com/Balance)"
+[ -n "$(cj .dashboard_url)" ] && note "Dashboard: $(cj .dashboard_url)"
+
+if [ $fail = 0 ]; then ok "All good"; else say "${R}$fail problem(s) above.${N} README → Troubleshooting, or ask Claude with this output."; fi
+exit $fail

@@ -1,0 +1,9 @@
+[Unit]
+Description=Crew Command: watch for the dashboard's gateway-restart request
+
+[Path]
+PathExists=/data/.hermes/hermes-dash/restart.request
+Unit=hermes-dash-restart.service
+
+[Install]
+WantedBy=multi-user.target

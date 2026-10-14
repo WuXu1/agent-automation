@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# crew-key: change one key, typed at a hidden prompt, checked, saved where it belongs, then a quiet restart.
+#   sudo crew-key deepseek | gemini | elevenlabs | telegram-chief | telegram-tutor | telegram-assistant | telegram-coach
+#   sudo crew-key telegram-me      re-learn which Telegram account is yours (only that account can use the bots)
+set -euo pipefail
+. /opt/agent-automation/vm/lib.sh
+. "$KIT/vm/stages/30-keys.sh"
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+what="${1:-}"
+case "$what" in
+  deepseek)
+    k="$(ask_secret "New DeepSeek API key")"; check_deepseek "$k" || die "DeepSeek didn't accept it; nothing changed."
+    printf '%s\n' "$k" | key_for_all DEEPSEEK_API_KEY
+    printf '%s\n' "$k" | env_set "$HH/mem0-server/server.env" OPENAI_API_KEY
+    systemctl restart mem0-server ;;
+  gemini)
+    k="$(ask_secret "New Gemini API key")"; check_gemini "$k" || die "Google didn't accept it; nothing changed."
+    printf '%s\n' "$k" | key_for_all GEMINI_API_KEY; cj_set '.has_gemini' true
+    as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null ;;
+  elevenlabs)
+    k="$(ask_secret "New ElevenLabs API key")"
+    [ "$(curl_status "url = \"https://api.elevenlabs.io/v1/user\"
+header = \"xi-api-key: $k\"")" = 200 ] || die "ElevenLabs didn't accept it; nothing changed."
+    printf '%s\n' "$k" | key_for_all ELEVENLABS_API_KEY ;;
+  telegram-chief|telegram-tutor|telegram-assistant|telegram-coach)
+    role="${what#telegram-}"
+    k="$(ask_secret "New bot token for $(jq -r --arg r "$role" '.agents[]|select(.role==$r)|.name' "$CREW_JSON")")"
+    u="$(tg_api "$k" getMe | jq -r '.result.username // empty')"; [ -n "$u" ] || die "Telegram didn't accept it; nothing changed."
+    printf '%s\n' "$k" | env_set "$(env_of "$role")" TELEGRAM_BOT_TOKEN; cj_set ".bots.$role" "$(jstr "$u")" ;;
+  telegram-me)
+    tmp="$(mktemp)"; jq 'del(.telegram_user_id)' "$CREW_JSON" > "$tmp" && install -o hermes -g hermes -m 640 "$tmp" "$CREW_JSON"; rm -f "$tmp"
+    stage_telegram
+    as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null ;;
+  *) sed -n '2,4p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac
+k=""
+ok "Saved."
+/usr/local/bin/crew-restart || warn "Not restarted yet (agents busy). It takes effect at the next: sudo crew-restart"
