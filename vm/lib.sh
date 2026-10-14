@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Helpers for the server side (vm/install.sh and the crew-* commands). Sourced, never run. Runs as root.
+# Helpers for the server side (vm/install.sh and the hermes-* commands). Sourced, never run. Runs as root.
 
 KIT=/opt/agent-automation
 DATA=/data

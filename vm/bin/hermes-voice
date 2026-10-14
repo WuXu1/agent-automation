@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# crew-voice: voice-note replies (optional, set up whenever you like). Send an agent a voice note and it answers with a
+# hermes-voice: voice-note replies (optional, set up whenever you like). Send an agent a voice note and it answers with a
 # voice note in its own ElevenLabs voice; typed messages stay text. You pick a voice for each agent.
-#   sudo crew-voice          set up, or change the voices
-#   sudo crew-voice off      switch voice replies off again (the key stays saved)
+#   sudo hermes-voice          set up, or change the voices
+#   sudo hermes-voice off      switch voice replies off again (the key stays saved)
 # Money: ElevenLabs' free plan has 10,000 characters a month (roughly 60 short voice replies); student offers give more.
 set -euo pipefail
 . /opt/agent-automation/vm/lib.sh
@@ -24,7 +24,7 @@ install_plugin() {   # the plugin, copied into every agent's home, with voices.j
 if [ "${1:-}" = off ]; then
   cj_set '.features.voice' false
   as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
-  ok "Voice replies off."; /usr/local/bin/crew-restart || true; exit 0
+  ok "Voice replies off."; /usr/local/bin/hermes-restart || true; exit 0
 fi
 
 step "Voice replies"
@@ -75,4 +75,4 @@ printf '%s' "$cur" | jq --arg t "$tid" '{("telegram:" + $t): "voice_only", ("tut
     ("assistant:telegram:" + $t): "voice_only", ("coach:telegram:" + $t): "voice_only"} + .' \
   | install -o hermes -g hermes -m 600 /dev/stdin "$vf"
 ok "Voice replies on: send any agent a voice note to hear it. In a chat, /voice changes when it speaks (off, voice_only, all)."
-/usr/local/bin/crew-restart || warn "Agents busy; voices start at the next: sudo crew-restart"
+/usr/local/bin/hermes-restart || warn "Agents busy; voices start at the next: sudo hermes-restart"

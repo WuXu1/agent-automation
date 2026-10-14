@@ -1,9 +1,9 @@
 ---
-name: setup-crew
-description: Walk someone through installing agent-automation (their own four-agent crew on Azure for Students + Telegram), and troubleshoot it afterwards. Use when the user says "help me set this up", "install", asks what an install step means, or reports something not working with their agents, bots, dashboard or server.
+name: setup-hermes
+description: Walk someone through installing agent-automation (their own four Hermes agents on Azure for Students + Telegram), and troubleshoot it afterwards. Use when the user says "help me set this up", "install", asks what an install step means, or reports something not working with their agents, bots, dashboard or server.
 ---
 
-# Setting up the crew with someone
+# Setting up Hermes with someone
 
 The person types; you guide. `./install.sh` and every command that takes a key must run in **their own terminal**, never in
 yours: hidden prompts need a real terminal, and keys must never pass through the chat. Never ask them to paste a key, token or
@@ -34,7 +34,7 @@ They run `./install.sh` in a terminal in this folder. What each part looks like,
 ## 3. When something fails
 The scripts stop with a ✗ line saying what to do. Every rerun of `./install.sh` carries on where it stopped. Read the logs, not your memory:
 - Laptop: `~/.agent-automation/install.log` (you can read this file directly; it never contains keys).
-- Server: ask them to run `./crew ssh` then `sudo tail -n 80 /var/log/agent-automation.log`, or `./crew status`, and paste the output.
+- Server: ask them to run `./hermes ssh` then `sudo tail -n 80 /var/log/agent-automation.log`, or `./hermes status`, and paste the output.
 
 | Symptom | Likely cause → fix |
 |---|---|
@@ -42,13 +42,13 @@ The scripts stop with a ✗ line saying what to do. Every rerun of `./install.sh
 | Server never joins Tailscale | They approved it with a different Tailscale account → rerun `./install.sh` for a fresh link |
 | "Can't reach your server" | Tailscale is off on the computer, or on WSL the Windows Tailscale app isn't signed in |
 | DeepSeek key refused | No balance yet (top up), or a copy-paste with a missing character |
-| A bot never answers | `./crew status` → the bot's token line; `./crew key telegram-<role>` to replace a revoked token |
-| Bots ignore them or say "not authorised" | The wrong Telegram account was recorded (someone else pressed Start first) → `./crew key telegram-me`, then press Start in the chief's bot again |
-| Dashboard won't open | Tailscale off on that device, or HTTPS Certificates not enabled in the Tailscale DNS page → enable, then `./crew update` |
-| Agents slow or "out of memory" | `./crew status` shows memory; `sudo crew-restart` |
+| A bot never answers | `./hermes status` → the bot's token line; `./hermes key telegram-<role>` to replace a revoked token |
+| Bots ignore them or say "not authorised" | The wrong Telegram account was recorded (someone else pressed Start first) → `./hermes key telegram-me`, then press Start in the chief's bot again |
+| Dashboard won't open | Tailscale off on that device, or HTTPS Certificates not enabled in the Tailscale DNS page → enable, then `./hermes update` |
+| Agents slow or "out of memory" | `./hermes status` shows memory; `sudo hermes-restart` |
 
 More in docs/TROUBLESHOOTING.md.
 
 ## 4. After it works
-Suggest they message the chief on Telegram ("hi, what can you do?"), open `./crew dashboard`, and later try `./crew voice`
-(pick voices), `./crew addon gmail|moodle|backup`. Recommend the backup add-on: without it a deleted server loses everything.
+Suggest they message the chief on Telegram ("hi, what can you do?"), open `./hermes dashboard`, and later try `./hermes voice`
+(pick voices), `./hermes addon gmail|moodle|backup`. Recommend the backup add-on: without it a deleted server loses everything.

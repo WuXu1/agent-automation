@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# crew-backup: the nightly encrypted backup of everything on this server that the kit cannot rebuild. It goes to your Google Drive
+# hermes-backup: the nightly encrypted backup of everything on this server that the kit cannot rebuild. It goes to your Google Drive
 # (folder agent-automation-backups) and nothing of it stays on the server afterwards except a one-line status.
-# Installed by crew-addon-backup as /usr/local/sbin/crew-backup (root-owned, outside /data, so no agent can change what root runs) and
-# started every night by crew-backup.timer. Silent when it works; your chief of staff sends you a Telegram note when it fails.
-#   sudo crew-backup                    make one now (a Telegram note if it fails)
-#   sudo BACKUP_QUIET=1 crew-backup     the same, never a Telegram note
-# Last result: cat /var/backups/crew-backup/last-status        Restore: sudo crew-restore (docs/BACKUPS.md)
+# Installed by hermes-addon-backup as /usr/local/sbin/hermes-backup (root-owned, outside /data, so no agent can change what root runs) and
+# started every night by hermes-backup.timer. Silent when it works; your chief of staff sends you a Telegram note when it fails.
+#   sudo hermes-backup                    make one now (a Telegram note if it fails)
+#   sudo BACKUP_QUIET=1 hermes-backup     the same, never a Telegram note
+# Last result: cat /var/backups/hermes-backup/last-status        Restore: sudo hermes-restore (docs/BACKUPS.md)
 #
 # In it: /data/.hermes (every agent's settings and keys, sessions, the board, scheduled jobs, your notebooks in owner/, crew.json, the
 # memory server's settings), /data/workspace, /data/tools (the tools' data, e.g. the Gmail sign-in) and the shared memory's Postgres
@@ -19,18 +19,18 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 [ "$(id -u)" = 0 ] || exec sudo BACKUP_QUIET="${BACKUP_QUIET:-}" "$0" "$@"
 cd /
 
-CONF=/etc/crew-backup                   # passphrase and rclone.conf (the Google Drive sign-in), both root-only
-OUT=/var/backups/crew-backup            # last-status; tonight's archive only while it is being sent
-STAGE=/var/tmp/crew-backup-stage        # database copies, deleted at the end
+CONF=/etc/hermes-backup                   # passphrase and rclone.conf (the Google Drive sign-in), both root-only
+OUT=/var/backups/hermes-backup            # last-status; tonight's archive only while it is being sent
+STAGE=/var/tmp/hermes-backup-stage        # database copies, deleted at the end
 FOLDER=agent-automation-backups         # in your Google Drive (My Drive)
 HH=/data/.hermes
 HERMES=/home/hermes/.local/bin/hermes
 PY=/opt/hermes/hermes-agent/venv/bin/python
 [ -x "$PY" ] || PY=/usr/bin/python3
-NAME="crew-backup-$(date +%Y-%m-%d-%H%M).tar.gz.gpg"
+NAME="hermes-backup-$(date +%Y-%m-%d-%H%M).tar.gz.gpg"
 RC=(rclone --config "$CONF/rclone.conf")
 
-KEEP_DAYS=35                            # change with: echo 14 | sudo tee /etc/crew-backup/keep-days  (7 to 365)
+KEEP_DAYS=35                            # change with: echo 14 | sudo tee /etc/hermes-backup/keep-days  (7 to 365)
 if [ -s "$CONF/keep-days" ]; then
   k="$(tr -dc '0-9' < "$CONF/keep-days")"
   [ -n "$k" ] && [ "$k" -ge 7 ] && [ "$k" -le 365 ] && KEEP_DAYS="$k"
@@ -39,7 +39,7 @@ fi
 # Rebuildable folders inside every agent's home (the chief's and each profile's): never backed up.
 HSKIP=(tools installs cache logs lsp bin audio_cache image_cache)
 
-exec 9>/run/crew-backup.lock
+exec 9>/run/hermes-backup.lock
 flock -n 9 || { echo "a backup (or a restore) is already running"; exit 0; }
 
 OWNER="$(jq -r '.owner.name // empty' "$HH/crew.json" 2>/dev/null || true)"
@@ -52,7 +52,7 @@ tell_owner() {
     "$HERMES" send --to telegram -q "$1" >/dev/null 2>&1 </dev/null || true
 }
 
-status() {   # one line, readable by anyone (no secrets in it): the dashboard and crew-doctor can show it
+status() {   # one line, readable by anyone (no secrets in it): the dashboard and hermes-doctor can show it
   install -d -m 755 "$OUT"
   echo "$(date -Is) $*" > "$OUT/last-status"
   chmod 644 "$OUT/last-status"
@@ -61,14 +61,14 @@ status() {   # one line, readable by anyone (no secrets in it): the dashboard an
 fail() {
   status "FAILED: $*"
   echo "backup failed: $*" >&2
-  tell_owner "${OWNER:+$OWNER, }the nightly backup of your server failed: $*. The earlier backups in your Google Drive are untouched. On the server, 'sudo crew-backup' tries again; 'journalctl -u crew-backup' has the details."
+  tell_owner "${OWNER:+$OWNER, }the nightly backup of your server failed: $*. The earlier backups in your Google Drive are untouched. On the server, 'sudo hermes-backup' tries again; 'journalctl -u hermes-backup' has the details."
   rm -rf "$STAGE" "$OUT/$NAME.part"
   exit 1
 }
 
-[ -s "$CONF/passphrase" ] || fail "no backup passphrase is set (run: sudo crew-addon backup)"
-[ -s "$CONF/rclone.conf" ] || fail "Google Drive is not connected (run: sudo crew-addon backup)"
-command -v rclone >/dev/null || fail "rclone is not installed (run: sudo crew-addon backup)"
+[ -s "$CONF/passphrase" ] || fail "no backup passphrase is set (run: sudo hermes-addon backup)"
+[ -s "$CONF/rclone.conf" ] || fail "Google Drive is not connected (run: sudo hermes-addon backup)"
+command -v rclone >/dev/null || fail "rclone is not installed (run: sudo hermes-addon backup)"
 command -v gpg >/dev/null || fail "gpg is not installed (sudo apt install gnupg)"
 id hermes >/dev/null 2>&1 || fail "there is no 'hermes' user on this server"
 free_kb="$(df -Pk /var/tmp | awk 'NR==2 {print $4}')"
@@ -161,22 +161,22 @@ done
 if [ -z "$sent" ]; then
   why="details: sudo cat $OUT/drive.err"
   grep -qi quota "$OUT/drive.err" && why="your Google Drive looks full (free some space, or keep fewer days: docs/BACKUPS.md)"
-  grep -qiE 'invalid_grant|unauthorized|token' "$OUT/drive.err" && why="the Google sign-in needs renewing: ./crew backup-login on your laptop, then sudo crew-addon backup"
+  grep -qiE 'invalid_grant|unauthorized|token' "$OUT/drive.err" && why="the Google sign-in needs renewing: ./hermes backup-login on your laptop, then sudo hermes-addon backup"
   grep -qi rateLimitExceeded "$OUT/drive.err" && why="Google's shared limit for rclone was busy; it usually works the next night"
   # keep tonight's archive (encrypted) on the server until the next good night, but never more than one
-  for f in "$OUT"/crew-backup-*.tar.gz.gpg; do [ -e "$f" ] && [ "$f" != "$OUT/$NAME" ] && rm -f -- "$f"; done
+  for f in "$OUT"/hermes-backup-*.tar.gz.gpg; do [ -e "$f" ] && [ "$f" != "$OUT/$NAME" ] && rm -f -- "$f"; done
   fail "the upload to Google Drive failed after 6 tries ($why)"
 fi
 rm -f "$OUT/drive.err"
 # Keep KEEP_DAYS days. Deleted for good (not to Drive's bin), so old archives never take up space unseen.
-"${RC[@]}" delete "gdrive:$FOLDER" --min-age "${KEEP_DAYS}d" --include 'crew-backup-*.tar.gz.gpg' --drive-use-trash=false \
+"${RC[@]}" delete "gdrive:$FOLDER" --min-age "${KEEP_DAYS}d" --include 'hermes-backup-*.tar.gz.gpg' --drive-use-trash=false \
   >/dev/null 2>&1 || true
 
 # 4. nothing stays on the server (a leftover from an earlier failed night goes too, now that tonight's is safe)
-rm -f -- "$OUT"/crew-backup-*.tar.gz.gpg
+rm -f -- "$OUT"/hermes-backup-*.tar.gz.gpg
 if [ -n "$WARN" ]; then
   status "ok $NAME $SIZE | drive | warning: $WARN"
-  tell_owner "${OWNER:+$OWNER, }last night's server backup is in your Google Drive, but $WARN. 'sudo crew-doctor' on the server shows what is not running."
+  tell_owner "${OWNER:+$OWNER, }last night's server backup is in your Google Drive, but $WARN. 'sudo hermes-doctor' on the server shows what is not running."
 else
   status "ok $NAME $SIZE | drive"
 fi

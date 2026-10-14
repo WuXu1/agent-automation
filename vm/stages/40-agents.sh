@@ -19,5 +19,5 @@ stage_agents() {
   install -d -o hermes -g hermes -m 755 "$DATA/tools/weather" "$DATA/tools/gmail"
   install -o hermes -g hermes -m 755 "$KIT/vm/tools/weather/forecast.py" "$DATA/tools/weather/forecast.py"
   install -o hermes -g hermes -m 755 "$KIT/vm/tools/gmail/gmail_read.py" "$DATA/tools/gmail/gmail_read.py"
-  ok "Tools: weather (Open-Meteo, free), Gmail reader (switched on later with: sudo crew-addon gmail)"
+  ok "Tools: weather (Open-Meteo, free), Gmail reader (switched on later with: sudo hermes-addon gmail)"
 }

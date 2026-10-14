@@ -24,7 +24,7 @@ stage_gateway() {
   local log="$HH/logs/gateway.log" n
   sleep 5
   n="$(grep -ciE 'telegram.*(connected|polling|started)' "$log" 2>/dev/null || echo 0)"
-  note "Telegram connections seen in the log: $n (four expected; 'sudo crew-doctor' checks properly)"
+  note "Telegram connections seen in the log: $n (four expected; 'sudo hermes-doctor' checks properly)"
 }
 
 # Stage: the scheduled jobs: the chief's morning briefing, and one reminder before the Azure credit runs out.

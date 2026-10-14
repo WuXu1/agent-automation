@@ -2,7 +2,7 @@
   "about": "What the dashboard knows about this install that it cannot read from the VM: names, who uses what, where secrets live, ports. Agents are named by their Hermes profile (default = the chief); the bridge turns profiles into the names in crew.json. Anything on the VM that is not described here still shows up (as 'found, not described yet'). Items with a 'feature' are optional add-ons: they show as off until crew.json switches that feature on.",
   "integrations": [
     {"id": "deepseek", "name": "DeepSeek", "kind": "API key (required)", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["DEEPSEEK_API_KEY"],
-     "secret": "/data/.hermes/.env and each profile's .env (DEEPSEEK_API_KEY)", "fix": "top up at platform.deepseek.com, or paste a new key with: ./crew key deepseek",
+     "secret": "/data/.hermes/.env and each profile's .env (DEEPSEEK_API_KEY)", "fix": "top up at platform.deepseek.com, or paste a new key with: ./hermes key deepseek",
      "note": "the agents' model (deepseek-flash), pay as you go", "check": "builtin"},
     {"id": "gemini", "name": "Gemini", "kind": "API key (optional fallback)", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["GEMINI_API_KEY"],
      "secret": "/data/.hermes/.env (GEMINI_API_KEY)", "fix": "a free key at aistudio.google.com/apikey",
@@ -18,17 +18,17 @@
     {"id": "openalex", "name": "OpenAlex", "kind": "Hermes plugin, no key", "usedBy": ["tutor"], "plugin": "openalex", "keys": [],
      "secret": "no secret", "fix": "hermes -p tutor plugins install openalex on the VM", "check": "plugin"},
     {"id": "gmail", "name": "Gmail", "kind": "IMAP app password (add-on)", "feature": "gmail", "usedBy": ["default", "assistant"], "keys": ["GMAIL_ADDRESS", "GMAIL_APP_PASSWORD"],
-     "secret": "/data/.hermes/owner/.secrets/gmail.env", "fix": "a new app password at myaccount.google.com/apppasswords, typed in with: ./crew addon gmail",
-     "enable": "switch it on with: ./crew addon gmail", "check": "builtin"},
+     "secret": "/data/.hermes/owner/.secrets/gmail.env", "fix": "a new app password at myaccount.google.com/apppasswords, typed in with: ./hermes addon gmail",
+     "enable": "switch it on with: ./hermes addon gmail", "check": "builtin"},
     {"id": "moodle", "name": "Moodle", "kind": "session cookie, moodle-cli (add-on)", "feature": "moodle", "usedBy": ["tutor", "assistant"], "mcp": ["moodle"],
      "keys": ["MOODLE_TOKEN", "MOODLE_BASE_URL", "MOODLE_NO_UPDATE_CHECK"],
-     "secret": "the tutor's and assistant's .env (MOODLE_TOKEN)", "fix": "copy a fresh MoodleSession cookie from your browser and type it in with: ./crew addon moodle",
-     "enable": "switch it on with: ./crew addon moodle", "check": "builtin"},
+     "secret": "the tutor's and assistant's .env (MOODLE_TOKEN)", "fix": "copy a fresh MoodleSession cookie from your browser and type it in with: ./hermes addon moodle",
+     "enable": "switch it on with: ./hermes addon moodle", "check": "builtin"},
     {"id": "elevenlabs", "name": "ElevenLabs (voice replies)", "kind": "API key (add-on)", "feature": "voice", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["ELEVENLABS_API_KEY"],
-     "secret": "each agent's .env (ELEVENLABS_API_KEY)", "fix": "a new key at elevenlabs.io, typed in with: ./crew key elevenlabs", "enable": "switch it on with: ./crew voice", "check": "builtin"},
+     "secret": "each agent's .env (ELEVENLABS_API_KEY)", "fix": "a new key at elevenlabs.io, typed in with: ./hermes key elevenlabs", "enable": "switch it on with: ./hermes voice", "check": "builtin"},
     {"id": "drive", "name": "Google Drive (backups)", "kind": "rclone OAuth token (add-on)", "feature": "backup", "usedBy": [], "keys": [],
-     "secret": "/etc/crew-backup/rclone.conf (root only)", "fix": "sign rclone in again: ./crew backup-login, then ./crew addon backup",
-     "enable": "switch it on with: ./crew addon backup (docs/BACKUPS.md)", "check": "builtin"}
+     "secret": "/etc/hermes-backup/rclone.conf (root only)", "fix": "sign rclone in again: ./hermes backup-login, then ./hermes addon backup",
+     "enable": "switch it on with: ./hermes addon backup (docs/BACKUPS.md)", "check": "builtin"}
   ],
   "ignoreKeys": ["API_SERVER_*", "LLM_MODEL"],
   "tools": [

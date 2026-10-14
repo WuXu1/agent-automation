@@ -37,8 +37,8 @@ run jobs once
 run dashboard always
 
 step "Checking everything"
-/usr/local/bin/crew-doctor || true
+/usr/local/bin/hermes-doctor || true
 say
-ok "Your crew is ready. Say hello to $(cj '.agents[0].name') on Telegram: https://t.me/$(cj .bots.chief)"
+ok "Your Hermes agents are ready. Say hello to $(cj '.agents[0].name') on Telegram: https://t.me/$(cj .bots.chief)"
 [ -n "$(cj .dashboard_url)" ] && say "  Dashboard (from your own devices with Tailscale on): $(cj .dashboard_url)"
-say "  Later, when you want them: voice replies (sudo crew-voice), Gmail, Moodle (sudo crew-addon), backups. See the README."
+say "  Later, when you want them: voice replies (sudo hermes-voice), Gmail, Moodle (sudo hermes-addon), backups. See the README."

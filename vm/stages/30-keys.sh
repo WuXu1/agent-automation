@@ -45,7 +45,7 @@ stage_keys() {
     local g
     while :; do
       g="$(ask_secret "Gemini API key (Enter to skip)")"
-      [ -n "$g" ] || { warn "Skipped: no backup brain. Add it later with: sudo crew-key gemini"; cj_set '.has_gemini' false; break; }
+      [ -n "$g" ] || { warn "Skipped: no backup brain. Add it later with: sudo hermes-key gemini"; cj_set '.has_gemini' false; break; }
       if check_gemini "$g"; then printf '%s\n' "$g" | key_for_all GEMINI_API_KEY; cj_set '.has_gemini' true; ok "Gemini key saved"; break; fi
       warn "Google didn't accept that key. Try again, or press Enter to skip."
     done
@@ -80,7 +80,7 @@ stage_telegram() {
     printf '%s\n' "$tok" | env_set "$envf" TELEGRAM_BOT_TOKEN
     # Tidy the bot's profile: its display name and a one-line description (both public, both harmless).
     tg_api "$tok" setMyName "data-urlencode = \"name=$name\"" >/dev/null || true
-    tg_api "$tok" setMyShortDescription "data-urlencode = \"short_description=$(cj ".agents[$((i-1))].title") in $(cj .owner.name)'s private AI crew.\"" >/dev/null || true
+    tg_api "$tok" setMyShortDescription "data-urlencode = \"short_description=$(cj ".agents[$((i-1))].title") in $(cj .owner.name)'s private Hermes team.\"" >/dev/null || true
     cj_set ".bots.$role" "$(jstr "$uname")"
     tok=""
     ok "$name: @$uname"

@@ -34,7 +34,7 @@ CONF
       echo "MEM0_DEFAULT_LLM_MODEL=deepseek-flash"; echo "MEM0_TELEMETRY=false"; echo "HISTORY_DB_PATH=$MEM0_STATE/history.db"
     } > "$tmp"
     install -o hermes -g hermes -m 600 "$tmp" "$MEM0_ENV"; rm -f "$tmp"
-  else   # keep the DeepSeek key in step with the agents' (it may have been changed with crew-key)
+  else   # keep the DeepSeek key in step with the agents' (it may have been changed with hermes-key)
     env_get "$(env_of chief)" DEEPSEEK_API_KEY | env_set "$MEM0_ENV" OPENAI_API_KEY
   fi
   local dbpw; dbpw="$(env_get "$MEM0_ENV" POSTGRES_PASSWORD)"

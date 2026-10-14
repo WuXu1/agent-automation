@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# crew-addon-backup: nightly encrypted backups of your agents to your own Google Drive (optional, free). Set up once:
-#   ./crew addon backup  (laptop)  or  sudo crew-addon backup  (server)   set up; run it again to change the passphrase, the Google
+# hermes-addon-backup: nightly encrypted backups of your agents to your own Google Drive (optional, free). Set up once:
+#   ./hermes addon backup  (laptop)  or  sudo hermes-addon backup  (server)   set up; run it again to change the passphrase, the Google
 #                                      account or how many days are kept
-#   sudo crew-addon-backup             the same: change the passphrase, the Google account or how many days are kept
-#   sudo crew-addon-backup --status    when the last backup ran, how it went, what is on Drive
-#   sudo crew-addon-backup --off       stop the nightly backups (the backups already in your Drive stay there)
-# Before setting up, have your laptop ready for the Google sign-in: ./crew backup-login (docs/BACKUPS.md explains it all).
+#   sudo hermes-addon-backup             the same: change the passphrase, the Google account or how many days are kept
+#   sudo hermes-addon-backup --status    when the last backup ran, how it went, what is on Drive
+#   sudo hermes-addon-backup --off       stop the nightly backups (the backups already in your Drive stay there)
+# Before setting up, have your laptop ready for the Google sign-in: ./hermes backup-login (docs/BACKUPS.md explains it all).
 set -euo pipefail
 [ "$(id -u)" = 0 ] || exec sudo bash "$0" "$@"
 . /opt/agent-automation/vm/lib.sh
@@ -14,24 +14,24 @@ umask 077
 
 case "${1:-}" in
   --off|off)
-    systemctl disable --now crew-backup.timer >/dev/null 2>&1 || true
+    systemctl disable --now hermes-backup.timer >/dev/null 2>&1 || true
     cj_set '.features.backup' false
     ok "Nightly backups are off. The backups already in your Google Drive stay there (folder $BK_FOLDER)."
-    note "Your passphrase and Google sign-in stay on the server (root only), so 'sudo crew-addon backup' turns them back on quickly."
+    note "Your passphrase and Google sign-in stay on the server (root only), so 'sudo hermes-addon backup' turns them back on quickly."
     note "To cut the Google link completely: sudo rm $BK_CONF/rclone.conf, and remove 'rclone' at https://myaccount.google.com/permissions"
     exit 0 ;;
   --status|status)
     if [ -s "$BK_OUT/last-status" ]; then say "  Last backup: $(cat "$BK_OUT/last-status")"; else say "  No backup has run yet."; fi
-    if systemctl is-enabled --quiet crew-backup.timer 2>/dev/null; then
-      say "  Next one:    $(systemctl show crew-backup.timer -p NextElapseUSecRealtime --value 2>/dev/null)"
-    else say "  Nightly backups are off (sudo crew-addon backup turns them on)."; fi
+    if systemctl is-enabled --quiet hermes-backup.timer 2>/dev/null; then
+      say "  Next one:    $(systemctl show hermes-backup.timer -p NextElapseUSecRealtime --value 2>/dev/null)"
+    else say "  Nightly backups are off (sudo hermes-addon backup turns them on)."; fi
     if drive_ok; then
       say "  Newest backups in your Google Drive (folder $BK_FOLDER):"
       rclone --config "$BK_CONF/rclone.conf" lsf --format tsp --separator '|' "gdrive:$BK_FOLDER" --include '*.tar.gz.gpg' 2>/dev/null \
         | sort -r | head -n 5 | awk -F'|' '{printf "    %s  %6.0f MB  %s\n", $1, $2/1048576, $3}'
       n="$(rclone --config "$BK_CONF/rclone.conf" lsf "gdrive:$BK_FOLDER" --include '*.tar.gz.gpg' 2>/dev/null | wc -l)"
       say "  $n backups in all."
-    elif [ -s "$BK_CONF/rclone.conf" ]; then warn "The Google sign-in no longer works: ./crew backup-login on your laptop, then sudo crew-addon backup"
+    elif [ -s "$BK_CONF/rclone.conf" ]; then warn "The Google sign-in no longer works: ./hermes backup-login on your laptop, then sudo hermes-addon backup"
     fi
     exit 0 ;;
   ""|--setup) ;;
@@ -91,27 +91,27 @@ done
 printf '%s\n' "$d" > "$BK_CONF/keep-days"; chmod 600 "$BK_CONF/keep-days"
 ok "Backups older than $d days are deleted from your Drive (for good, not into the bin)"
 
-install -o root -g root -m 755 "$KIT/vm/backup/crew-backup" /usr/local/sbin/crew-backup
-install -o root -g root -m 755 "$KIT/vm/backup/crew-restore" /usr/local/sbin/crew-restore
-install -o root -g root -m 755 "$KIT/vm/backup/crew-addon-backup" /usr/local/sbin/crew-addon-backup
-install -o root -g root -m 644 "$KIT/vm/backup/crew-backup.service" /etc/systemd/system/crew-backup.service
-install -o root -g root -m 644 "$KIT/vm/backup/crew-backup.timer" /etc/systemd/system/crew-backup.timer
+install -o root -g root -m 755 "$KIT/vm/backup/hermes-backup" /usr/local/sbin/hermes-backup
+install -o root -g root -m 755 "$KIT/vm/backup/hermes-restore" /usr/local/sbin/hermes-restore
+install -o root -g root -m 755 "$KIT/vm/backup/hermes-addon-backup" /usr/local/sbin/hermes-addon-backup
+install -o root -g root -m 644 "$KIT/vm/backup/hermes-backup.service" /etc/systemd/system/hermes-backup.service
+install -o root -g root -m 644 "$KIT/vm/backup/hermes-backup.timer" /etc/systemd/system/hermes-backup.timer
 systemctl daemon-reload
-systemctl enable --now --quiet crew-backup.timer
+systemctl enable --now --quiet hermes-backup.timer
 cj_set '.features.backup' true
 ok "Nightly backup switched on (about 04:20 your time; a missed night is caught up when the server is back)"
 
 # 4. the first one, now
 step "4/4  Making the first backup now (a minute or two)"
-if BACKUP_QUIET=1 /usr/local/sbin/crew-backup; then
+if BACKUP_QUIET=1 /usr/local/sbin/hermes-backup; then
   ok "$(cat "$BK_OUT/last-status")"
   say
   say "  Done. Check it in your browser: https://drive.google.com → My Drive → ${B}$BK_FOLDER${N}"
   say "  From now on it's silent when it works; $(cj '.agents[0].name' || echo 'your chief of staff') tells you on Telegram if a night fails."
-  say "  Any time: ${B}sudo crew-addon-backup --status${N}.  To restore: ${B}sudo crew-restore${N} (docs/BACKUPS.md)."
+  say "  Any time: ${B}sudo hermes-addon-backup --status${N}.  To restore: ${B}sudo hermes-restore${N} (docs/BACKUPS.md)."
   say "  ${B}Have you written down the passphrase?${N} Without it these backups can't be opened."
 else
   warn "The first backup didn't work: $(cat "$BK_OUT/last-status" 2>/dev/null)"
-  say "  The nightly job is on and will try again tonight. Fix what it says, then: sudo crew-backup"
+  say "  The nightly job is on and will try again tonight. Fix what it says, then: sudo hermes-backup"
   exit 1
 fi

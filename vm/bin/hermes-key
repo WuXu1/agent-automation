@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# crew-key: change one key, typed at a hidden prompt, checked, saved where it belongs, then a quiet restart.
-#   sudo crew-key deepseek | gemini | elevenlabs | telegram-chief | telegram-tutor | telegram-assistant | telegram-coach
-#   sudo crew-key telegram-me      re-learn which Telegram account is yours (only that account can use the bots)
+# hermes-key: change one key, typed at a hidden prompt, checked, saved where it belongs, then a quiet restart.
+#   sudo hermes-key deepseek | gemini | elevenlabs | telegram-chief | telegram-tutor | telegram-assistant | telegram-coach
+#   sudo hermes-key telegram-me      re-learn which Telegram account is yours (only that account can use the bots)
 set -euo pipefail
 . /opt/agent-automation/vm/lib.sh
 . "$KIT/vm/stages/30-keys.sh"
@@ -35,4 +35,4 @@ header = \"xi-api-key: $k\"")" = 200 ] || die "ElevenLabs didn't accept it; noth
 esac
 k=""
 ok "Saved."
-/usr/local/bin/crew-restart || warn "Not restarted yet (agents busy). It takes effect at the next: sudo crew-restart"
+/usr/local/bin/hermes-restart || warn "Not restarted yet (agents busy). It takes effect at the next: sudo hermes-restart"

@@ -1,4 +1,4 @@
-# Crew Command (dashboard)
+# Hermes Command (dashboard)
 
 One private web page for your Hermes crew: what your agents remember, what they are doing, what they cost and whether the
 VM is healthy. It runs on your VM and is reachable only from your own devices on your Tailscale network.

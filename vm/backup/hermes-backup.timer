@@ -1,4 +1,4 @@
-# Installed by crew-addon-backup as /etc/systemd/system/crew-backup.timer. The server's clock is set to your timezone by the
+# Installed by hermes-addon-backup as /etc/systemd/system/hermes-backup.timer. The server's clock is set to your timezone by the
 # installer, so this is about 04:20 your time; a night the server was off is caught up when it starts again.
 [Unit]
 Description=Nightly backup of your agents at about 04:20

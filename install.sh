@@ -18,7 +18,7 @@ case "${1:-}" in
 esac
 [ -t 0 ] || die "Run ./install.sh in a terminal window you type in (it asks questions and hidden keys). If Claude is helping you, run it yourself in a separate terminal and tell Claude what it says."
 
-say "${B}agent-automation${N}: your own crew of AI agents on a server you control."
+say "${B}agent-automation${N}: your own Hermes agents on a server you control."
 say "This takes about 30 to 45 minutes. Have these open: README → 'Before you start' (the accounts you need)."
 note "A log without any keys is kept in $LOG (Claude can read it if something goes wrong)."
 exec > >(tee -a "$LOG") 2>&1
@@ -41,6 +41,6 @@ put STEP_SERVER "done"
 
 say
 ok "All done."
-"$KIT_DIR/crew" status || true
+"$KIT_DIR/hermes" status || true
 say
-say "Next: message your chief of staff on Telegram. ${B}./crew help${N} lists everyday commands (dashboard link, updates, voice later)."
+say "Next: message your chief of staff on Telegram. ${B}./hermes help${N} lists everyday commands (dashboard link, updates, voice later)."

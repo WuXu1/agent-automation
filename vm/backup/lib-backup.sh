@@ -1,10 +1,10 @@
-# Helpers shared by crew-addon-backup and crew-restore. Sourced after /opt/agent-automation/vm/lib.sh, never run. Runs as root.
+# Helpers shared by hermes-addon-backup and hermes-restore. Sourced after /opt/agent-automation/vm/lib.sh, never run. Runs as root.
 # shellcheck shell=bash disable=SC2034   # the BK_* names are used by the scripts that source this
 
-BK_CONF=/etc/crew-backup                  # root only: passphrase, rclone.conf (the Google Drive sign-in), keep-days
-BK_OUT=/var/backups/crew-backup           # last-status
+BK_CONF=/etc/hermes-backup                  # root only: passphrase, rclone.conf (the Google Drive sign-in), keep-days
+BK_OUT=/var/backups/hermes-backup           # last-status
 BK_FOLDER=agent-automation-backups        # the folder in your Google Drive
-BK_LOCK=/run/crew-backup.lock             # the nightly backup and a restore never run at the same time
+BK_LOCK=/run/hermes-backup.lock             # the nightly backup and a restore never run at the same time
 
 # read_hidden "Prompt" -> exactly what was typed, on stdout (spaces kept, unlike ask_secret). Never shown, never on a command line.
 read_hidden() {
@@ -88,7 +88,7 @@ rclone_ok() {
 setup_drive() {
   install -d -m 700 "$BK_CONF"
   say "  The server has no web browser, so you sign in to Google on your laptop and paste the result here:"
-  say "    1. On your laptop, in a ${B}new${N} terminal, in the agent-automation folder:  ${B}./crew backup-login${N}"
+  say "    1. On your laptop, in a ${B}new${N} terminal, in the agent-automation folder:  ${B}./hermes backup-login${N}"
   note "   (or: bash vm/backup/laptop-authorize.sh). A Google page opens: pick the account for the backups and Allow."
   say "    2. rclone then prints a line that starts with ${B}{\"access_token\"${N}. Copy that whole line."
   say "    3. Paste it below (nothing shows; that's normal) and press Enter."
@@ -105,7 +105,7 @@ setup_drive() {
       return 0
     fi
     rm -f "$tmp"
-    [ "$tries" -lt 3 ] && warn "Run ./crew backup-login on your laptop again for a fresh token, then paste it here."
+    [ "$tries" -lt 3 ] && warn "Run ./hermes backup-login on your laptop again for a fresh token, then paste it here."
   done
   return 1
 }

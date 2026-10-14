@@ -92,7 +92,7 @@ class BridgeTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.dist = Path(tmp.name) / "dist"
         (self.dist / "assets").mkdir(parents=True)
-        (self.dist / "index.html").write_text("<!doctype html><title>Crew Command</title>")
+        (self.dist / "index.html").write_text("<!doctype html><title>Hermes Command</title>")
         (self.dist / "assets" / "index-abc.js").write_text("console.log(1)")
         (Path(tmp.name) / "secret.txt").write_text("not for the browser")
         self.app = bridge.App(bridge.Mem0(self.mem0.url, "test-key", "sam"), self.dist, [OWNER])
@@ -235,7 +235,7 @@ class BridgeTest(unittest.TestCase):
     def test_serves_the_page_and_assets(self):
         status, hdrs, body = self.call("GET", "/")
         self.assertEqual(status, 200)
-        self.assertIn(b"Crew Command", body)
+        self.assertIn(b"Hermes Command", body)
         self.assertEqual(hdrs["Cache-Control"], "no-cache")
         status, hdrs, _ = self.call("GET", "/assets/index-abc.js")
         self.assertEqual(status, 200)

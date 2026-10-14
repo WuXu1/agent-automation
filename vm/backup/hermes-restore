@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# crew-restore: put your agents back as they were in one of the nightly backups.
-#   sudo crew-restore                      choose a backup in your Google Drive (newest first)
-#   sudo crew-restore FILE.tar.gz.gpg      use an archive you already copied to this server
-#   sudo crew-restore --list               only list the backups in your Drive
+# hermes-restore: put your agents back as they were in one of the nightly backups.
+#   sudo hermes-restore                      choose a backup in your Google Drive (newest first)
+#   sudo hermes-restore FILE.tar.gz.gpg      use an archive you already copied to this server
+#   sudo hermes-restore --list               only list the backups in your Drive
 # On a brand-new server: run ./install.sh from your laptop first (it builds the server and the agents), then
-#   sudo bash /opt/agent-automation/vm/backup/crew-restore
+#   sudo bash /opt/agent-automation/vm/backup/hermes-restore
 # It downloads the archive, unlocks it with your passphrase, shows what it holds and asks before changing anything. Then it stops the
 # agents and the memory server, puts back /data/.hermes, /data/workspace and /data/tools and the shared memory's databases, and starts
-# everything again. Every file it overwrites (and the memory databases as they were) is kept in /var/backups/crew-restore-<time> first.
+# everything again. Every file it overwrites (and the memory databases as they were) is kept in /var/backups/hermes-restore-<time> first.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || exec sudo bash "$0" "$@"
 . /opt/agent-automation/vm/lib.sh
@@ -15,9 +15,9 @@ set -euo pipefail
 umask 077
 cd /
 
-WORK=/var/tmp/crew-restore              # the decrypted backup, only while this runs (root only; always deleted at the end)
+WORK=/var/tmp/hermes-restore              # the decrypted backup, only while this runs (root only; always deleted at the end)
 TS="$(date +%Y%m%d-%H%M%S)"
-SAFE=/var/backups/crew-restore-$TS      # what the restore replaced
+SAFE=/var/backups/hermes-restore-$TS      # what the restore replaced
 MEM0_ENV=$HH/mem0-server/server.env
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -32,7 +32,7 @@ need_drive() {
   ensure_rclone
   if ! drive_ok; then
     step "Connect your Google Drive (to fetch the backups)"
-    setup_drive || die "Google Drive isn't connected. Or download the backup in your browser, copy it here and run: sudo crew-restore FILE"
+    setup_drive || die "Google Drive isn't connected. Or download the backup in your browser, copy it here and run: sudo hermes-restore FILE"
   fi
 }
 
@@ -177,7 +177,7 @@ ok "Shared memory back"
 # 7. things that belong to this server, not to the backup
 dns="$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | sed 's/\.$//')"
 [ -n "$dns" ] && [ -s "$CREW_JSON" ] && cj_set '.dashboard_url' "$(jstr "https://$dns:8444/")"
-if [ "$(cj .features.backup)" = true ] && ! systemctl is-enabled --quiet crew-backup.timer 2>/dev/null; then
+if [ "$(cj .features.backup)" = true ] && ! systemctl is-enabled --quiet hermes-backup.timer 2>/dev/null; then
   cj_set '.features.backup' false; BK_HINT=1
 fi
 
@@ -191,10 +191,10 @@ for i in $(seq 1 24); do
   sleep 5
   if systemctl is-active --quiet hermes-gateway && curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1; then up=1; break; fi
 done
-if [ -n "$up" ]; then ok "Agents back online"; else warn "The agents haven't answered yet: sudo crew-doctor (and journalctl -u hermes-gateway -n 40)"; fi
+if [ -n "$up" ]; then ok "Agents back online"; else warn "The agents haven't answered yet: sudo hermes-doctor (and journalctl -u hermes-gateway -n 40)"; fi
 
 say
 ok "Restored from $LABEL."
-say "  Check everything with: ${B}sudo crew-doctor${N} (if you made new Telegram bots since that backup, set their tokens with sudo crew-key)."
+say "  Check everything with: ${B}sudo hermes-doctor${N} (if you made new Telegram bots since that backup, set their tokens with sudo hermes-key)."
 say "  What the restore replaced is in $SAFE; once you're happy: ${B}sudo rm -rf $SAFE${N}"
-[ -z "${BK_HINT:-}" ] || say "  Nightly backups aren't set up on this server yet: ${B}sudo crew-addon backup${N}"
+[ -z "${BK_HINT:-}" ] || say "  Nightly backups aren't set up on this server yet: ${B}sudo hermes-addon backup${N}"

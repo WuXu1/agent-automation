@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# crew-doctor: is everything working? Plain-English checks, nothing is changed. Run on the server:  sudo crew-doctor
+# hermes-doctor: is everything working? Plain-English checks, nothing is changed. Run on the server:  sudo hermes-doctor
 set -uo pipefail
 . /opt/agent-automation/vm/lib.sh
 [ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
@@ -9,7 +9,7 @@ bad() { printf '%s  ✗ %s%s\n' "$R" "$*" "$N"; fail=$((fail+1)); }
 say "${B}Health check${N} ($(date '+%a %d %b %H:%M'))"
 for s in hermes-gateway mem0-server postgresql hermes-dash tailscaled; do
   if systemctl is-active --quiet "$s"; then ok "$s running"
-  else case "$s" in hermes-dash) warn "$s (the dashboard) is not running: ./crew update reinstalls it" ;; *) bad "$s is not running: sudo systemctl restart $s ; journalctl -u $s -n 30" ;; esac; fi
+  else case "$s" in hermes-dash) warn "$s (the dashboard) is not running: ./hermes update reinstalls it" ;; *) bad "$s is not running: sudo systemctl restart $s ; journalctl -u $s -n 30" ;; esac; fi
 done
 
 curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1 && ok "agents' local API answers" || bad "the agents' local API doesn't answer (gateway starting or stuck)"
@@ -22,7 +22,7 @@ for role in $ROLES; do
   tok="$(env_get "$(env_of "$role")" TELEGRAM_BOT_TOKEN)"
   if [ -z "$tok" ]; then bad "$name has no Telegram bot token: run the installer again"; continue; fi
   u="$(printf 'url = "https://api.telegram.org/bot%s/getMe"\n' "$tok" | curl -s -m 10 -K - | jq -r '.result.username // empty')"
-  [ -n "$u" ] && ok "$name's bot @$u is valid" || bad "$name's bot token was refused by Telegram (revoked?): sudo crew-key telegram-$role"
+  [ -n "$u" ] && ok "$name's bot @$u is valid" || bad "$name's bot token was refused by Telegram (revoked?): sudo hermes-key telegram-$role"
   tok=""
 done
 

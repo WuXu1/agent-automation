@@ -1,6 +1,6 @@
 # agent-automation
 
-**Your own crew of AI agents, on a server you control, that you talk to on Telegram.** One guided install, built for students
+**Your own Hermes agents, on a server you control, that you talk to on Telegram.** One guided install, built for students
 with the Azure for Students credit.
 
 | Agent | What they do |
@@ -11,7 +11,7 @@ with the Azure for Students credit.
 | **Coach** | Training, food, sleep, habits and recovery, with the weather for outdoor plans |
 
 You name them. Each has its own Telegram bot, and they share one long-term memory (a "second brain") so what you tell one, the
-others know. You can also watch everything on **Crew Command**, a private dashboard: the memory as a 3D star map, the agents
+others know. You can also watch everything on **Hermes Command**, a private dashboard: the memory as a 3D star map, the agents
 and what they're doing live, their board of jobs, the server's health and your balances.
 
 It runs [Hermes Agent](https://github.com/NousResearch/hermes-agent) (open source, by Nous Research) on a small Linux server
@@ -63,21 +63,21 @@ Talk to your agents on Telegram. Send a voice note and they understand it; typin
 
 | Command | What it does |
 |---|---|
-| `./crew status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
-| `./crew dashboard` | Opens Crew Command (Tailscale must be on) |
-| `./crew update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
-| `./crew restart` | Restarts the agents (it waits until they're idle) |
-| `./crew key deepseek` | Changes a key: `deepseek`, `gemini`, `elevenlabs`, `telegram-chief`… |
-| `./crew logs` | The agents' recent log (useful to paste to Claude when something's wrong) |
-| `./crew ssh` | A terminal on the server |
+| `./hermes status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
+| `./hermes dashboard` | Opens Hermes Command (Tailscale must be on) |
+| `./hermes update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
+| `./hermes restart` | Restarts the agents (it waits until they're idle) |
+| `./hermes key deepseek` | Changes a key: `deepseek`, `gemini`, `elevenlabs`, `telegram-chief`… |
+| `./hermes logs` | The agents' recent log (useful to paste to Claude when something's wrong) |
+| `./hermes ssh` | A terminal on the server |
 
 ### Later, when you want them
 | Command | Adds |
 |---|---|
-| `./crew voice` | **Voice replies**: send a voice note, get one back in that agent's own voice. You choose each agent's voice from ElevenLabs (free plan: about 60 short replies a month). [docs/VOICE.md](docs/VOICE.md) |
-| `./crew addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
-| `./crew addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
-| `./crew addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
+| `./hermes voice` | **Voice replies**: send a voice note, get one back in that agent's own voice. You choose each agent's voice from ElevenLabs (free plan: about 60 short replies a month). [docs/VOICE.md](docs/VOICE.md) |
+| `./hermes addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
+| `./hermes addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
+| `./hermes addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
 
 Phone calls aren't in this kit yet. Voice notes work.
 
@@ -86,7 +86,7 @@ Phone calls aren't in this kit yet. Voice notes work.
 | What | Cost |
 |---|---|
 | Server (Azure: VM, disk, internet address) | about **$1.25 a day** from your $100 student credit, so it lasts **about 80 days**. No card is charged; when the credit runs out Azure switches the server off |
-| DeepSeek | pay as you go: light personal use is usually a few dollars a month. `./crew status` shows the balance |
+| DeepSeek | pay as you go: light personal use is usually a few dollars a month. `./hermes status` shows the balance |
 | Gemini, Telegram, Tailscale, Open-Meteo weather, OpenAlex papers | free |
 | ElevenLabs (voice replies, optional) | free plan, or a student offer |
 
@@ -94,7 +94,7 @@ Your chief of staff reminds you on Telegram after 70 days. Your options then:
 - **Azure for Students renews** every 12 months while you're a student. Check your balance at
   https://www.microsoftazuresponsorships.com/Balance.
 - **Move to a cheaper server.** For example, Hetzner's CX23 costs about €5.50 a month. Restore your backup there.
-- **Delete it** with `./crew destroy`. It asks twice before deleting anything.
+- **Delete it** with `./hermes destroy`. It asks twice before deleting anything.
 
 Don't "Stop" the server in the Azure portal to save credit: student subscriptions can struggle to get it started again.
 
@@ -105,7 +105,7 @@ Don't "Stop" the server in the Azure portal to save credit: student subscription
 | Hermes Agent v0.21.5 | Pinned to one tested release, plus three small fixes in `vm/hermes-patches/`. It never updates itself; see [docs/UPDATING.md](docs/UPDATING.md) |
 | Your four agents | One process (`hermes-gateway`) runs all four, as an unprivileged user `hermes`. Settings come from `vm/crewlib.py`; personalities from `vm/agents/souls/` (yours to edit afterwards: `/data/.hermes/SOUL.md` and `profiles/*/SOUL.md`) |
 | Memory | [Mem0](https://github.com/mem0ai/mem0) with Postgres on the server; searching runs locally, so your notes aren't sent anywhere to be searched |
-| Dashboard | Crew Command, only on your Tailscale network, only for your account |
+| Dashboard | Hermes Command, only on your Tailscale network, only for your account |
 | Security | No public ports at all. Keys are typed at hidden prompts and stored only on the server (mode 600). Security updates install themselves |
 
 More: [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) · [docs/UPDATING.md](docs/UPDATING.md)

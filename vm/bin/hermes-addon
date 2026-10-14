@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# crew-addon: optional extras, any time after the install.
-#   sudo crew-addon gmail      the chief and assistant can read your Gmail and write drafts (never send, delete or move)
-#   sudo crew-addon moodle     the tutor and assistant can read your university's Moodle (deadlines, courses, grades; never submit)
-#   sudo crew-addon backup     nightly encrypted backup to your Google Drive (docs/BACKUPS.md)
-#   sudo crew-addon <name> off switch one off again
+# hermes-addon: optional extras, any time after the install.
+#   sudo hermes-addon gmail      the chief and assistant can read your Gmail and write drafts (never send, delete or move)
+#   sudo hermes-addon moodle     the tutor and assistant can read your university's Moodle (deadlines, courses, grades; never submit)
+#   sudo hermes-addon backup     nightly encrypted backup to your Google Drive (docs/BACKUPS.md)
+#   sudo hermes-addon <name> off switch one off again
 set -euo pipefail
 . /opt/agent-automation/vm/lib.sh
 [ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
@@ -12,7 +12,7 @@ what="${1:-}"; off="${2:-}"
 apply() {  # write the settings for the new feature flags, then a quiet restart
   as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
   as_hermes "$HPY" -I "$KIT/vm/crewlib.py" skills >/dev/null
-  /usr/local/bin/crew-restart || warn "Agents busy; it takes effect at the next: sudo crew-restart"
+  /usr/local/bin/hermes-restart || warn "Agents busy; it takes effect at the next: sudo hermes-restart"
 }
 
 case "$what" in
@@ -64,11 +64,11 @@ case "$what" in
     hermes_cli -p tutor cron list 2>/dev/null | grep -q "Moodle keep-alive" || \
       hermes_cli -p tutor cron create "every 30m" --name "Moodle keep-alive" --script moodle-keepalive.sh --no-agent --deliver telegram >/dev/null || warn "couldn't add the keep-alive job"
     cj_set '.features.moodle' true; apply
-    ok "Moodle on for $(cj '.agents[1].name') and $(cj '.agents[2].name'). When it says the session expired: sudo crew-addon moodle" ;;
+    ok "Moodle on for $(cj '.agents[1].name') and $(cj '.agents[2].name'). When it says the session expired: sudo hermes-addon moodle" ;;
 
   backup)
-    [ -x "$KIT/vm/backup/crew-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (./crew update)."
-    exec bash "$KIT/vm/backup/crew-addon-backup" ${off:+--off} ;;
+    [ -x "$KIT/vm/backup/hermes-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (./hermes update)."
+    exec bash "$KIT/vm/backup/hermes-addon-backup" ${off:+--off} ;;
 
   *) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

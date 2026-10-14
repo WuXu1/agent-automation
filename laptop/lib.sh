@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Shared helpers for the laptop side (install.sh, crew). Sourced, not run. Plain bash 3.2+ (the version macOS ships).
+# Shared helpers for the laptop side (install.sh, hermes). Sourced, not run. Plain bash 3.2+ (the version macOS ships).
 
 KIT_DIR="${KIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 STATE_DIR="${CREW_STATE_DIR:-$HOME/.agent-automation}"

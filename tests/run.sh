@@ -3,11 +3,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 fail=0
-for f in install.sh crew laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/crew-* vm/backup/crew-backup vm/backup/crew-addon-backup vm/backup/crew-restore vm/backup/*.sh vm/tools/moodle/*.sh dashboard/bridge/deploy/*.sh; do
+for f in install.sh hermes laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/hermes-* vm/backup/hermes-backup vm/backup/hermes-addon-backup vm/backup/hermes-restore vm/backup/*.sh vm/tools/moodle/*.sh dashboard/bridge/deploy/*.sh; do
   [ -f "$f" ] || continue
   bash -n "$f" || { echo "syntax error: $f"; fail=1; }
 done
-command -v shellcheck >/dev/null && { shellcheck -S error install.sh crew laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/crew-* || fail=1; }
+command -v shellcheck >/dev/null && { shellcheck -S error install.sh hermes laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/hermes-* || fail=1; }
 python3 -c "import yaml" 2>/dev/null || { echo "(installing PyYAML for the tests)"; python3 -m pip install -q pyyaml; }
 python3 -B -m unittest discover -s tests || fail=1
 python3 -B -m unittest discover -s vm/tools/weather || fail=1

@@ -3,8 +3,8 @@
 # Nothing on the server is reachable from the internet: there are no inbound firewall rules at all. The first contact goes
 # through Azure's own "run command" (no SSH needed), which installs Tailscale on it; after that we use SSH over Tailscale.
 
-RG_DEFAULT=crew-rg
-VM_DEFAULT=crew-vm
+RG_DEFAULT=hermes-rg
+VM_DEFAULT=hermes-vm
 VM_SIZE=Standard_B2als_v2            # 2 vCPU, 4 GB RAM: about $31.50 a month of credit
 IMAGE=Canonical:ubuntu-24_04-lts:server:latest
 PREFERRED_REGIONS="belgiumcentral francecentral switzerlandnorth norwayeast denmarkeast swedencentral polandcentral italynorth spaincentral germanywestcentral northeurope westeurope uksouth ukwest"
@@ -51,7 +51,7 @@ create_vm() {
   local rg vm admin region
   rg="$(get AZ_RG)"; rg="${rg:-$RG_DEFAULT}"
   vm="$(get AZ_VM)"; vm="${vm:-$VM_DEFAULT}"
-  admin="$(get VM_ADMIN)"; admin="${admin:-crew}"
+  admin="$(get VM_ADMIN)"; admin="${admin:-azureuser}"
   put AZ_RG "$rg"; put AZ_VM "$vm"; put VM_ADMIN "$admin"
 
   if az vm show -g "$rg" -n "$vm" -o none 2>/dev/null; then

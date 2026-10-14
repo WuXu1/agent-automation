@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# crew-restart: restart the agents only when they are idle (no board job running, no message in the last 2 minutes),
-# then wait until they answer again. Exit 2 = busy, try later.   sudo crew-restart [--now] [--check]
+# hermes-restart: restart the agents only when they are idle (no board job running, no message in the last 2 minutes),
+# then wait until they answer again. Exit 2 = busy, try later.   sudo hermes-restart [--now] [--check]
 set -uo pipefail
 [ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
 HH=/data/.hermes

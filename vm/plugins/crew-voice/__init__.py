@@ -4,7 +4,7 @@ The gateway hands this provider whatever it wants spoken (an auto voice reply, o
 text_to_speech call). Long or written-style text is rewritten into one to three spoken sentences
 with Hermes's own auxiliary LLM; then ElevenLabs speaks it in the profile's voice
 (tts.voice in that profile's config.yaml). Who each voice belongs to and the owner's name: voices.json beside this
-file, written by `sudo crew-voice`. Style rules: STYLE.md beside this file.
+file, written by `sudo hermes-voice`. Style rules: STYLE.md beside this file.
 """
 import json
 import logging

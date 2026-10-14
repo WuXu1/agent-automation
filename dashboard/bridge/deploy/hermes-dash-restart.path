@@ -1,5 +1,5 @@
 [Unit]
-Description=Crew Command: watch for the dashboard's gateway-restart request
+Description=Hermes Command: watch for the dashboard's gateway-restart request
 
 [Path]
 PathExists=/data/.hermes/hermes-dash/restart.request
