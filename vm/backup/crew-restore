@@ -75,7 +75,7 @@ else
   IFS='|' read -r when bytes LABEL <<<"${rows[$((n-1))]}"
   free_kb="$(df -Pk /var/tmp | awk 'NR==2 {print $4}')"
   [ "$free_kb" -gt $(( bytes * 4 / 1024 + 524288 )) ] || die "Not enough free disk space to unpack it (needs about 4x its size)."
-  say "  Downloading $LABEL…"
+  say "  Downloading ${LABEL}…"
   rclone --config "$BK_CONF/rclone.conf" copyto "gdrive:$BK_FOLDER/$LABEL" "$ARCH" --retries 3 \
     || die "The download failed (message above). Try again in a minute."
 fi

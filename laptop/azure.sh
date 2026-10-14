@@ -67,7 +67,7 @@ create_vm() {
   local regions; regions="$(allowed_regions)"
   note "Regions this subscription allows, best first: $regions"
   for region in $regions; do
-    say "  Trying $region…"
+    say "  Trying ${region}…"
     az group create -n "$rg" -l "$region" --tags project=agent-automation -o none 2>/dev/null || true
     local err
     if err="$(az vm create -g "$rg" -n "$vm" -l "$region" --image "$IMAGE" --size "$VM_SIZE" \
