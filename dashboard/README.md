@@ -8,7 +8,7 @@ VM is healthy. It runs on your VM and is reachable only from your own devices on
 | View | What you see and can do |
 |---|---|
 | **Second Brain** | Your Mem0 memory as a 3D sky of stars, grouped into sections. Search by meaning, click a star to read, edit, pin or delete a note, add notes (an AI can tidy them first). A weekly check-up suggests merges and clean-ups; nothing changes until you press Apply. |
-| **Agent Studio** | The chief over the three specialists, with live lines while they hand work to each other. Click an agent for its settings; "Watch live logs" there opens its terminal (read only). Edit an agent's name, description, SOUL, model and effort; switch skills and MCP servers on or off; manage automations (Hermes cron jobs). New agents are added through Claude, not here. |
+| **Agent Studio** | The chief over the three specialists, with live lines while they hand work to each other. Click an agent for its settings; "Live logs" beside its close button opens its terminal (read only). Edit an agent's name, description, SOUL, model and effort; switch skills and MCP servers on or off; manage automations (Hermes cron jobs). New agents are added through Claude, not here. |
 | **Board** | The cards the team passes around: to do, running, waiting on you, done. Add a card, or answer one that is waiting. |
 | **Inbox** | Gmail, read only, with an AI summary. Shown only when the Gmail add-on is on. |
 | **Runway** | How long the Azure credit lasts, the VM's CPU, memory and disk, its services, and (with the backup add-on) the nightly backup with a "Backup now" button. |

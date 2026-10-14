@@ -7,7 +7,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion'
 import { IconButton } from './Button'
 
 /** A side sheet for details (right on a laptop, bottom on a phone). Escape closes it. Not modal: the view stays usable. */
-export function Drawer({ open, onClose, title, children, className, footer, wide }: {
+export function Drawer({ open, onClose, title, children, className, footer, wide, actions }: {
   open: boolean
   onClose: () => void
   title: ReactNode
@@ -16,6 +16,8 @@ export function Drawer({ open, onClose, title, children, className, footer, wide
   /** Pinned under the scrolling body: the drawer's actions. */
   footer?: ReactNode
   wide?: boolean
+  /** Small buttons in the header, left of the close button. */
+  actions?: ReactNode
 }) {
   const reduced = useReducedMotion()
   const narrow = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
@@ -46,6 +48,7 @@ export function Drawer({ open, onClose, title, children, className, footer, wide
         >
           <header className="flex items-center gap-2 border-b border-line px-5 py-3">
             <div className="min-w-0 flex-1 text-[14px] font-semibold">{title}</div>
+            {actions}
             <IconButton label="Close" onClick={onClose}><X className="size-4" /></IconButton>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>

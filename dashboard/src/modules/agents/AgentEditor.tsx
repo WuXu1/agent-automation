@@ -116,15 +116,12 @@ export function AgentEditor({ target, mesh, onClose, onAddServer, onWatch }: {
 
   return (
     <Drawer open={Boolean(target)} onClose={onClose} wide footer={footer}
+      actions={onWatch && editing ? (
+        <button type="button" onClick={() => onWatch(editing)} title={`Watch what ${agent?.name ?? 'this agent'} is doing on the server, live`}
+          className="press inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-[#04060a] px-2 py-1 text-[11px] text-ink-dim transition-colors hover:border-white/25 hover:text-ink">
+          <TerminalSquare className="size-3.5 text-[#86efac]" aria-hidden />Live logs
+        </button>) : undefined}
       title={<span className="inline-flex items-center gap-2"><AgentBadge id={agent?.id ?? null} />{agent?.name ?? 'Agent'}<span className="num text-2xs font-normal text-ink-faint">{editing}</span></span>}>
-      {onWatch && editing && (
-        <button type="button" onClick={() => onWatch(editing)}
-          className="press mb-3 flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-[#04060a] px-3 py-2.5 text-left transition-colors hover:border-white/25">
-          <TerminalSquare className="size-4 shrink-0 text-[#86efac]" aria-hidden />
-          <span className="min-w-0 flex-1"><span className="block text-[13px] text-ink">Watch live logs</span>
-            <span className="block truncate text-2xs text-ink-faint">What {agent?.name ?? 'this agent'} is doing on the server, step by step</span></span>
-          <span className="font-mono text-[11px] text-ink-faint" aria-hidden>&gt;_</span>
-        </button>)}
       {error && <p role="alert" className="mb-3 rounded-lg border border-alarm/40 bg-alarm/10 px-3 py-2 text-[12px] text-[#fca5a5]">{error}</p>}
       {!detail && !error && <div className="h-40 animate-pulse rounded-lg bg-white/[0.03]" />}
       {detail && (
