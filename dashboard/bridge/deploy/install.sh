@@ -121,7 +121,7 @@ done
 # If HTTPS certificates are off in the tailnet, `tailscale serve` prints a link and waits: give it 2 minutes, then say what to do.
 if ! out="$(timeout 120 tailscale serve --bg --https="$TS_PORT" "http://127.0.0.1:$PORT" 2>&1)"; then
   printf '%s\n' "$out" | grep -o 'https://login.tailscale.com[^ ]*' | head -n1 | sed 's/^/Open this link to switch on HTTPS for your tailnet: /'
-  die "Tailscale couldn't publish the dashboard. In the Tailscale admin's DNS page switch on MagicDNS and HTTPS Certificates, then run: ./hermes update"
+  die "Tailscale couldn't publish the dashboard. In the Tailscale admin's DNS page switch on MagicDNS and HTTPS Certificates, then run on the server: sudo bash /opt/agent-automation/dashboard/bridge/deploy/install.sh"
 fi
 DNS="$(tailscale status --json | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')"
 echo
