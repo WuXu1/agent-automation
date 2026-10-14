@@ -305,7 +305,7 @@ function AgentCard({ agent, ctx, tint, lead = 0 }: { agent: AgentState; ctx: Ctx
       ref={register(ctx, agent.id)}
       type="button"
       onClick={() => ctx.onOpen(agent.profile, tint)}
-      title={`${agent.description}\n\nClick to watch what ${agent.name} is doing`}
+      title={`${agent.description}\n\nClick for ${agent.name}'s settings and live logs`}
       className={cn('press group/card relative block w-full rounded-xl border bg-glass-strong p-3 text-left transition-[border-color,box-shadow] duration-300',
         isChief ? 'max-w-[360px]' : '', pending ? 'border-runway/60' : 'border-line-strong hover:border-white/25')}
       style={{
@@ -342,7 +342,7 @@ function AgentCard({ agent, ctx, tint, lead = 0 }: { agent: AgentState; ctx: Ctx
         <span className="num truncate text-[11px] text-ink-dim">{isChief ? `${agent.queued} new · ${agent.done7d} done this week` : `${agent.queued} queued · ${agent.done7d} done this week`}</span>
       </div>
       <RunStrip agent={agent} />
-      <span className="pointer-events-none absolute right-2.5 bottom-1 font-mono text-[9px] text-ink-faint opacity-0 transition-opacity duration-150 group-hover/card:opacity-100" aria-hidden>&gt;_ watch</span>
+      <span className="pointer-events-none absolute right-2.5 bottom-1 font-mono text-[9px] text-ink-faint opacity-0 transition-opacity duration-150 group-hover/card:opacity-100" aria-hidden>settings</span>
     </button>
   )
 }
