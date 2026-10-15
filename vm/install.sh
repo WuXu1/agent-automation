@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The server half of the install. Started by ./install.sh on your computer; you can also run it on the server yourself:
 #     sudo bash /opt/agent-automation/vm/install.sh            (safe to run again: finished stages are checked, not redone)
-#     sudo bash /opt/agent-automation/vm/install.sh --redo X   (run one stage again: migrate system questions hermes keys agents memory gateway jobs dashboard)
+#     sudo bash /opt/agent-automation/vm/install.sh --redo X   (run one stage again: system questions hermes keys agents memory gateway jobs dashboard)
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "run it with sudo" >&2; exit 1; }
 . /opt/agent-automation/vm/lib.sh
@@ -26,7 +26,6 @@ exec > >(tee -a /var/log/agent-automation.log) 2>&1
 chmod 600 /var/log/agent-automation.log
 printf '\n--- %s vm/install.sh %s ---\n' "$(date '+%F %T')" "${*:-}"
 
-run migrate always   # renames anything an older version of this kit named differently
 run system once
 run questions always
 run hermes always     # cheap when done; re-checks the pin and the patches

@@ -187,8 +187,8 @@ def write_config(team: dict, role: str) -> bool:
     ours = overlay(team, role)
     theirs_plugins = [p for p in ((old.get("plugins") or {}).get("enabled") or []) if p not in ours["plugins"]["enabled"]]
     if not team.get("features", {}).get("voice"):
-        theirs_plugins = [p for p in theirs_plugins if p not in ("hermes-voice", "crew-voice")]
-        if (old.get("tts") or {}).get("provider") in ("hermes-voice", "crew-voice"):
+        theirs_plugins = [p for p in theirs_plugins if p != "hermes-voice"]
+        if (old.get("tts") or {}).get("provider") == "hermes-voice":
             old.pop("tts", None)
     new = merge(old, ours)
     new["plugins"]["enabled"] = ours["plugins"]["enabled"] + theirs_plugins
