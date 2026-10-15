@@ -35,7 +35,7 @@ stage_jobs() {
     local t h m; t="$(ask "What time should $(cj '.agents[0].name') send your morning briefing? (HH:MM, 24-hour; 'none' to skip)" "08:00")"
     if [ "$t" != none ] && printf '%s' "$t" | grep -Eq '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'; then
       h="${t%%:*}"; m="${t##*:}"; h=$((10#$h)); m=$((10#$m))
-      hermes_cli cron create "$m $h * * *" "$(as_hermes "$HPY" -I "$KIT/vm/crewlib.py" briefing)" --name "Morning briefing" --deliver telegram >/dev/null \
+      hermes_cli cron create "$m $h * * *" "$(as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" briefing)" --name "Morning briefing" --deliver telegram >/dev/null \
         && ok "Morning briefing every day at $t" || warn "couldn't create the briefing; ask $(cj '.agents[0].name') to set one up"
     fi
   else ok "Morning briefing already scheduled"; fi

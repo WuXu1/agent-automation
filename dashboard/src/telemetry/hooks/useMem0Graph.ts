@@ -192,7 +192,7 @@ export const useBrain = create<BrainState>((set, get) => {
 })
 
 // Demo heartbeat: an agent looks something up every few seconds, the way the Mem0 plugin searches before each reply.
-// Keyed by Hermes profile, so it works for any crew's names.
+// Keyed by Hermes profile, so it works for any team's names.
 const DEMO_ASKS: Record<string, string[]> = {
   default: ['morning briefing', 'what is on the board', 'family calls', 'quiet hours'],
   tutor: ['deadline this week', 'study blocks', 'lab write-up', 'reading list'],
@@ -206,8 +206,8 @@ function useDemoHeartbeat(active: boolean) {
     const tick = () => {
       const s = useBrain.getState()
       if (s.status !== 'ready' || s.memories.length === 0) return
-      const crew = coreAgents()
-      const who = crew[Math.floor(Math.random() * crew.length)]!
+      const team = coreAgents()
+      const who = team[Math.floor(Math.random() * team.length)]!
       const agent: AgentId = who.id
       const asks = DEMO_ASKS[who.profile] ?? []
       const ask = asks[Math.floor(Math.random() * asks.length)]

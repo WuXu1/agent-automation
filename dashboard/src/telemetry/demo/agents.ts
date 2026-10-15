@@ -1,10 +1,10 @@
 import { hash, rng } from '@/lib/rng'
-import { DEMO_CREW } from '../crew'
+import { DEMO_TEAM } from '../team'
 import type { AgentId, AgentMesh, AgentState, Board, Handoff, Talk } from '../types'
 import { advanceSharedBoard, sharedBoard } from './board'
 
-// Demo mode always shows the made-up crew (telemetry/crew.ts DEMO_CREW): Atlas the chief over Sage, Ivy and Rocky.
-const CHIEF = DEMO_CREW.chief
+// Demo mode always shows the made-up team (telemetry/team.ts DEMO_TEAM): Atlas the chief over Sage, Ivy and Rocky.
+const CHIEF = DEMO_TEAM.chief
 
 const DESCRIPTION: Record<AgentId, string> = {
   atlas: 'Atlas: chief of staff. Briefings, reminders, the board, hands work to the team.',
@@ -22,7 +22,7 @@ const MCP: Record<AgentId, Array<[string, boolean]>> = {
 }
 
 function coreAgents(): AgentState[] {
-  return DEMO_CREW.agents.map((a): AgentState => ({
+  return DEMO_TEAM.agents.map((a): AgentState => ({
     id: a.id, profile: a.profile, name: a.name, description: DESCRIPTION[a.id] ?? '', core: true, model: 'deepseek-flash',
     effort: 'medium', mcp: (MCP[a.id] ?? []).map(([name, enabled]) => ({ name, enabled })),
     reportsTo: a.id === CHIEF ? null : CHIEF,
@@ -39,7 +39,7 @@ const STAGES: Array<[string, string, string]> = [
 ]
 const STAGE_MS = 15_000
 
-function crewAtWork(now: number): { talks: Talk[]; handoffs: Handoff[] } {
+function teamAtWork(now: number): { talks: Talk[]; handoffs: Handoff[] } {
   const cycle = Math.floor(now / (STAGE_MS * STAGES.length))
   const i = Math.floor(now / STAGE_MS) % STAGES.length
   const start = Math.floor(now / STAGE_MS) * STAGE_MS
@@ -78,7 +78,7 @@ function demoRuns(id: string, now: number): Pick<AgentState, 'runs' | 'reliabili
   return { runs: [...runs], reliability: { ok, errors, total: runs.length, pct: ok + errors ? Math.round(1000 * ok / (ok + errors)) / 10 : null } }
 }
 
-/** Loads from the board for each agent in `base` (the crew, or the list as it stands with demo edits). */
+/** Loads from the board for each agent in `base` (the team, or the list as it stands with demo edits). */
 export function meshFromBoard(board: Board, now = Date.now(), base: AgentState[] = coreAgents()): AgentMesh {
   const week = now - 7 * 86_400_000
   const agents = base.map((a) => {
@@ -104,17 +104,17 @@ export function meshFromBoard(board: Board, now = Date.now(), base: AgentState[]
     if (c.status === 'blocked') handoffs.push({ at: (c.startedAt ?? c.createdAt) + 600_000, from: c.assignee, to: boss, kind: 'question', title: c.title, cardId: c.id })
     if (c.completedAt) handoffs.push({ at: c.completedAt, from: c.assignee, to: boss, kind: 'done', title: c.title, cardId: c.id })
   }
-  const crew = crewAtWork(now)
-  handoffs.push(...crew.handoffs)
+  const team = teamAtWork(now)
+  handoffs.push(...team.handoffs)
   handoffs.sort((x, y) => y.at - x.at)
-  const talks: Talk[] = [...crew.talks]
+  const talks: Talk[] = [...team.talks]
   for (const c of board.cards) {
     if (!c.assignee || c.assignee === CHIEF) continue
     const boss = c.createdBy && c.createdBy !== c.assignee && (c.createdBy === 'owner' || ids.has(c.createdBy)) ? c.createdBy : CHIEF
     if (c.status === 'running') talks.push({ from: boss, to: c.assignee, state: 'working', title: c.title, cardId: c.id, since: c.startedAt ?? c.createdAt })
     if (c.status === 'blocked') talks.push({ from: c.assignee, to: boss, state: 'asking', title: c.title, cardId: c.id, since: c.startedAt ?? c.createdAt })
   }
-  const busy = new Set(crew.talks.map((t) => t.to))
+  const busy = new Set(team.talks.map((t) => t.to))
   const shown = agents.map((a) => (busy.has(a.id) ? { ...a, running: 1, lastActive: now } : a))
   return { at: now, gateway: { ok: true, version: '0.21.5' }, agents: shown, handoffs: handoffs.slice(0, 24), talks }
 }

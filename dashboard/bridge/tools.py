@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-import crew
+import team
 from actions import ActionError, Env, _lock, _read, backup, cli, log_action, need_restart, set_env_value, stamp, write_checked
 
 SKILL_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{1,47}$")
@@ -25,7 +25,7 @@ CUSTOM = "custom"
 
 
 def _profile(env: Env, profile: str) -> str:
-    profile = crew.profile_of(env.hermes_home, profile)
+    profile = team.profile_of(env.hermes_home, profile)
     if profile not in env.profiles():
         raise ActionError(404, "No such agent")
     return profile

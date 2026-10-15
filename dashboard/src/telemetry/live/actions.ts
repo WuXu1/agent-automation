@@ -2,7 +2,7 @@ import { api } from './client'
 import type { AgentDetail, RestartState } from '../types'
 
 // The bridge's write routes (bridge/actions.py). Each is called only from a confirmed control on the page.
-// An agent is named by its crew id or its Hermes profile; the bridge accepts either.
+// An agent is named by its team id or its Hermes profile; the bridge accepts either.
 export interface AgentInput {
   name?: string
   description?: string

@@ -1,4 +1,4 @@
-"""Offline tests for forecast.py: place resolution from crew.json and output formatting.
+"""Offline tests for forecast.py: place resolution from hermes.json and output formatting.
 
 Run from this folder: python3 -m unittest
 No network: geocoding is faked and the forecast is a canned Open-Meteo response.
@@ -15,8 +15,8 @@ import forecast
 HOME = {"name": "Testford", "lat": 52.2, "lon": 0.12}
 
 
-def write_crew(folder, data):
-    path = os.path.join(folder, "crew.json")
+def write_setup(folder, data):
+    path = os.path.join(folder, "hermes.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return path
@@ -59,7 +59,7 @@ class ConfigTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def test_reads_home_and_timezone(self):
-        cfg = forecast.load_config(write_crew(self.tmp.name, {"home": HOME, "timezone": "Europe/Paris"}))
+        cfg = forecast.load_config(write_setup(self.tmp.name, {"home": HOME, "timezone": "Europe/Paris"}))
         self.assertEqual(forecast.home_place(cfg), ("Testford", 52.2, 0.12))
         self.assertEqual(forecast.timezone_of(cfg), (ZoneInfo("Europe/Paris"), "Europe/Paris"))
 
@@ -85,7 +85,7 @@ class ResolvePlaceTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.cfg = forecast.load_config(write_crew(tmp.name, {"home": HOME, "timezone": "Europe/London"}))
+        self.cfg = forecast.load_config(write_setup(tmp.name, {"home": HOME, "timezone": "Europe/London"}))
 
     def no_network(self, name):
         raise AssertionError(f"geocoder should not be called for {name!r}")

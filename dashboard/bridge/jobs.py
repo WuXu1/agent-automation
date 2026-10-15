@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # -I leaves the scrip
 
 import actions  # noqa: E402
 import brain  # noqa: E402
-import crew  # noqa: E402
+import team  # noqa: E402
 import inbox  # noqa: E402
 import review  # noqa: E402
 import integrations  # noqa: E402
@@ -64,7 +64,7 @@ def _check(kind: str, args: dict, profiles: list[str], hermes_home: str = "/data
 
     def profile() -> str:
         p = args.get("profile")
-        p = crew.profile_of(hermes_home, p) if isinstance(p, str) else p
+        p = team.profile_of(hermes_home, p) if isinstance(p, str) else p
         if p not in profiles:
             raise ActionError(404, "No such agent")
         return p
@@ -209,7 +209,7 @@ def do_enhance(env: Env, a: dict, llm: Callable[..., str] = deepseek) -> dict:
     who = f"Agent: {a['name']}.\n" if a["name"] else ""
     about = f"What it does: {a['about']}\n" if a["about"] and a["field"] != "description" else ""
     tokens = {"description": 300, "soul": 4000, "skill": 4000}[a["field"]]
-    owner = crew.owner_name(env.hermes_home)
+    owner = team.owner_name(env.hermes_home)
     text = llm(Path(env.hermes_home) / ".env", PROMPTS[a["field"]].format(owner=owner), f"{who}{about}\n{owner}'s draft:\n{a['text']}", tokens,
                model=settings.load(env)["model"])
     text = re.sub(r"^```\w*\n|\n?```$", "", text.strip()).strip()        # models like to wrap it in a code fence
@@ -289,7 +289,7 @@ SORT = (
 
 
 def _team(env: Env) -> dict[str, str]:
-    c = crew.load(env.hermes_home)
+    c = team.load(env.hermes_home)
     return {"owner": c["owner"]["name"], "agents": ", ".join(a["name"] for a in c["agents"])}
 
 
@@ -336,7 +336,7 @@ def do_balances(env: Env, a: dict, get: Callable[[str, dict], Any] | None = None
         out["deepseek"] = {"balance": float(info.get("total_balance") or 0), "currency": info.get("currency") or "USD", "ok": bool(d.get("is_available"))}
     except Exception as exc:  # noqa: BLE001
         out["deepseek"] = {"error": type(exc).__name__}
-    if crew.feature(env.hermes_home, "voice") and main.get("ELEVENLABS_API_KEY"):
+    if team.feature(env.hermes_home, "voice") and main.get("ELEVENLABS_API_KEY"):
         try:
             d = get("https://api.elevenlabs.io/v1/user/subscription", {"xi-api-key": main["ELEVENLABS_API_KEY"]})
             out["elevenlabs"] = {"used": int(d.get("character_count") or 0), "limit": int(d.get("character_limit") or 0),

@@ -1,9 +1,9 @@
-import { crewNow } from '@/telemetry/crew'
+import { teamNow } from '@/telemetry/team'
 
-// Times are shown in the owner's time zone (crew.json `timezone`), falling back to UK time if it is not a valid zone.
+// Times are shown in the owner's time zone (hermes.json `timezone`), falling back to UK time if it is not a valid zone.
 const ok = new Map<string, boolean>()
 function zone(): string {
-  const tz = crewNow().timezone
+  const tz = teamNow().timezone
   if (!ok.has(tz)) {
     try { new Intl.DateTimeFormat('en-GB', { timeZone: tz }); ok.set(tz, true) } catch { ok.set(tz, false) }
   }

@@ -1,6 +1,6 @@
 # Command Center (dashboard)
 
-One private web page for your Hermes crew: what your agents remember, what they are doing, what they cost and whether the
+One private web page for your Hermes team: what your agents remember, what they are doing, what they cost and whether the
 VM is healthy. It runs on your VM and is reachable only from your own devices on your Tailscale network.
 
 ## What is on it
@@ -19,10 +19,10 @@ VM is healthy. It runs on your VM and is reachable only from your own devices on
 Every write sits behind a second "are you sure" click. The **Demo** switch shows the page with made-up data (an owner called
 Sam and the agents Atlas, Sage, Ivy and Rocky), so you can try everything without a VM.
 
-## Names come from crew.json
+## Names come from hermes.json
 
-Nothing on the page is hard-coded to one person. The bridge reads `/data/.hermes/crew.json` (written by the kit's installer)
-and serves it at `GET /api/crew`: your name, your agents' names and titles, your time zone, and which add-ons are on
+Nothing on the page is hard-coded to one person. The bridge reads `/data/.hermes/hermes.json` (written by the kit's installer)
+and serves it at `GET /api/team`: your name, your agents' names and titles, your time zone, and which add-ons are on
 (`voice`, `gmail`, `moodle`, `icloud`, `backup`). Change the file and the page follows on its next load; no restart.
 
 ## Install

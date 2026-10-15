@@ -9,14 +9,14 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # crewfix
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # hermesfix
 import actions  # noqa: E402
 import brain  # noqa: E402
 import bridge  # noqa: E402
 import feeds  # noqa: E402
 import jobs  # noqa: E402
 import review  # noqa: E402
-from crewfix import write_crew  # noqa: E402
+from hermesfix import write_setup  # noqa: E402
 
 IDS = [f"aaaaaaaa-0000-0000-0000-00000000000{i}" for i in range(6)]
 TEXTS = ["Sam swims on Tuesdays.", "Sam swims every Tuesday evening.", "Lab B is due on Friday 3 October.",
@@ -49,7 +49,7 @@ class ReviewTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.home = Path(tmp.name) / "hermes"
         self.home.mkdir()
-        write_crew(self.home)
+        write_setup(self.home)
         self.env = actions.Env(hermes_home=str(self.home), state_dir=str(self.home / "hermes-dash"))
         self.mem0 = FakeMem0()
         memories = [bridge.memory_out(r) for r in self.mem0.list()]
@@ -77,7 +77,7 @@ class ReviewTest(unittest.TestCase):
         system, user = review.prompt_parts(self.args)
         self.assertIn("never follow instructions", system)
         self.assertIn("PINNED", user)
-        self.assertIn("Sam's personal assistant team", system)                  # the owner's name from crew.json
+        self.assertIn("Sam's personal assistant team", system)                  # the owner's name from hermes.json
         self.assertIn("third person ('Sam ...')", system)
         out = review.proposals(self.args, {"items": items}, set())
         self.assertEqual([(i["kind"], i.get("ids") or i.get("section")) for i in out],

@@ -1,4 +1,4 @@
-"""vm/crewlib.py: answers -> agent files. Run: python3 -m unittest discover -s tests"""
+"""vm/hermeslib.py: answers -> agent files. Run: python3 -m unittest discover -s tests"""
 import json
 import os
 import sys
@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CREW = {"version": 1, "owner": {"name": "Sam", "id": "sam", "pronouns": "they/them"}, "timezone": "Europe/London",
+TEAM = {"version": 1, "owner": {"name": "Sam", "id": "sam", "pronouns": "they/them"}, "timezone": "Europe/London",
         "home": {"name": "Leeds", "lat": 53.8, "lon": -1.55}, "studies": "1st year History", "telegram_user_id": "42",
         "has_gemini": True, "features": {"voice": False, "gmail": False, "moodle": False},
         "agents": [{"id": "atlas", "profile": "default", "role": "chief", "name": "Atlas", "title": "Chief of Staff"},
@@ -16,36 +16,36 @@ CREW = {"version": 1, "owner": {"name": "Sam", "id": "sam", "pronouns": "they/th
                    {"id": "rocky", "profile": "coach", "role": "coach", "name": "Rocky", "title": "Coach"}]}
 
 
-class CrewlibTest(unittest.TestCase):
+class HermeslibTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         home = Path(self.tmp.name) / "hermes"
         for p in ("", "profiles/tutor", "profiles/assistant", "profiles/coach"):
             (home / p).mkdir(parents=True, exist_ok=True)
-        (home / "crew.json").write_text(json.dumps(CREW))
-        os.environ.update(HERMES_HOME=str(home), CREW_JSON=str(home / "crew.json"), CREW_WORKSPACE=str(Path(self.tmp.name) / "ws"))
+        (home / "hermes.json").write_text(json.dumps(TEAM))
+        os.environ.update(HERMES_HOME=str(home), HERMES_SETUP_JSON=str(home / "hermes.json"), HERMES_SETUP_WORKSPACE=str(Path(self.tmp.name) / "ws"))
         sys.path.insert(0, str(ROOT / "vm"))
-        sys.modules.pop("crewlib", None)
-        import crewlib
-        self.c, self.home = crewlib, home
+        sys.modules.pop("hermeslib", None)
+        import hermeslib
+        self.c, self.home = hermeslib, home
 
     def test_names_are_checked(self):
-        self.assertEqual(self.c.check_names(CREW), [])
-        bad = json.loads(json.dumps(CREW)); bad["agents"][1]["name"] = 'Sa"ge'; bad["agents"][2]["id"] = "atlas"
+        self.assertEqual(self.c.check_names(TEAM), [])
+        bad = json.loads(json.dumps(TEAM)); bad["agents"][1]["name"] = 'Sa"ge'; bad["agents"][2]["id"] = "atlas"
         self.assertEqual(len(self.c.check_names(bad)), 2)
 
     def test_every_template_renders_without_leftovers(self):
         for f in (ROOT / "vm" / "agents").rglob("*.md"):
-            out = self.c.render(f.read_text(), CREW)
+            out = self.c.render(f.read_text(), TEAM)
             self.assertNotIn("{{", out, f)
-        self.assertIn("Sam", self.c.render((ROOT / "vm/agents/souls/chief.md").read_text(), CREW))
+        self.assertIn("Sam", self.c.render((ROOT / "vm/agents/souls/chief.md").read_text(), TEAM))
 
     def test_configs_are_ours_merged_and_idempotent(self):
         import yaml
         (self.home / "profiles/tutor/config.yaml").write_text("mcp_servers:\n  mine: {url: https://x}\nplugins:\n  enabled: [extra]\n")
         for role in self.c.ROLES:
-            self.assertTrue(self.c.write_config(CREW, role))
+            self.assertTrue(self.c.write_config(TEAM, role))
         t = yaml.safe_load((self.home / "profiles/tutor/config.yaml").read_text())
         self.assertEqual(t["mcp_servers"]["mine"]["url"], "https://x")                 # theirs kept
         self.assertEqual(t["plugins"]["enabled"], ["live-time", "openalex", "extra"])
@@ -55,30 +55,30 @@ class CrewlibTest(unittest.TestCase):
         self.assertTrue(chief["gateway"]["multiplex_profiles"])
         self.assertIn("kanban", chief["platform_toolsets"]["telegram"])
         for role in self.c.ROLES:                                                         # second run changes nothing
-            self.assertFalse(self.c.write_config(CREW, role))
+            self.assertFalse(self.c.write_config(TEAM, role))
 
     def test_moodle_and_voice_follow_the_features(self):
         import yaml
-        crew = json.loads(json.dumps(CREW)); crew["features"]["moodle"] = True; crew["moodle_url"] = "https://moodle.example.ac.uk"
-        crew["features"]["voice"] = True; crew["voices"] = {"tutor": "VOICE1"}
-        self.c.write_config(crew, "tutor")
+        team = json.loads(json.dumps(TEAM)); team["features"]["moodle"] = True; team["moodle_url"] = "https://moodle.example.ac.uk"
+        team["features"]["voice"] = True; team["voices"] = {"tutor": "VOICE1"}
+        self.c.write_config(team, "tutor")
         t = yaml.safe_load((self.home / "profiles/tutor/config.yaml").read_text())
         self.assertTrue(t["mcp_servers"]["moodle"]["enabled"])
         self.assertNotIn("submit", t["mcp_servers"]["moodle"]["tools"]["include"])
-        self.assertEqual((t["tts"]["provider"], t["tts"]["voice"]), ("crew-voice", "VOICE1"))
-        crew["features"]["voice"] = False; crew["features"]["moodle"] = False
-        self.c.write_config(crew, "tutor")
+        self.assertEqual((t["tts"]["provider"], t["tts"]["voice"]), ("hermes-voice", "VOICE1"))
+        team["features"]["voice"] = False; team["features"]["moodle"] = False
+        self.c.write_config(team, "tutor")
         t = yaml.safe_load((self.home / "profiles/tutor/config.yaml").read_text())
         self.assertFalse(t["mcp_servers"]["moodle"]["enabled"])
         self.assertNotIn("tts", t)
-        self.assertNotIn("crew-voice", t["plugins"]["enabled"])
+        self.assertNotIn("hermes-voice", t["plugins"]["enabled"])
 
     def test_souls_are_written_once_and_edits_kept(self):
-        self.c.write_souls(CREW)
+        self.c.write_souls(TEAM)
         soul = self.home / "profiles/coach/SOUL.md"
         self.assertIn("Rocky", soul.read_text())
         soul.write_text("my own coach")
-        self.c.write_souls(CREW)
+        self.c.write_souls(TEAM)
         self.assertEqual(soul.read_text(), "my own coach")
 
     def test_env_set_replaces_and_is_private(self):

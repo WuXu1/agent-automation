@@ -1,6 +1,6 @@
-"""The installer's Python half: turns /data/.hermes/crew.json (the owner's answers) into each agent's files.
+"""The installer's Python half: turns /data/.hermes/hermes.json (the owner's answers) into each agent's files.
 
-Run with Hermes's own Python (it has PyYAML):  /opt/hermes/hermes-agent/venv/bin/python /opt/agent-automation/vm/crewlib.py <command>
+Run with Hermes's own Python (it has PyYAML):  /opt/hermes/hermes-agent/venv/bin/python /opt/agent-automation/vm/hermeslib.py <command>
 Commands:
   configs        write the four config.yaml files (our settings merged over what is there; nothing else of theirs is lost)
   souls          write each SOUL.md and the seed USER.md, only where none exists yet (yours to edit afterwards)
@@ -9,7 +9,7 @@ Commands:
   briefing       print the morning briefing prompt (for `hermes cron create`)
   env-set FILE KEY      set KEY in an .env file to the value read from stdin (never from the command line)
   env-has FILE KEY      exit 0 when KEY has a value in FILE
-  check-names    validate crew.json (names, ids) and print what is wrong
+  check-names    validate hermes.json (names, ids) and print what is wrong
 Everything here is idempotent: running it twice changes nothing the second time.
 """
 from __future__ import annotations
@@ -29,8 +29,8 @@ except ImportError:  # pragma: no cover - only outside Hermes's venv
 
 KIT = Path(__file__).resolve().parent
 HOME = Path(os.environ.get("HERMES_HOME", "/data/.hermes"))
-CREW_JSON = Path(os.environ.get("CREW_JSON", str(HOME / "crew.json")))
-WORKSPACE = Path(os.environ.get("CREW_WORKSPACE", "/data/workspace"))
+HERMES_SETUP_JSON = Path(os.environ.get("HERMES_SETUP_JSON", str(HOME / "hermes.json")))
+WORKSPACE = Path(os.environ.get("HERMES_SETUP_WORKSPACE", "/data/workspace"))
 ROLES = ("chief", "tutor", "assistant", "coach")
 PROFILE = {"chief": "default", "tutor": "tutor", "assistant": "assistant", "coach": "coach"}
 ROLE_SKILL = {"chief": "team-lead", "tutor": "tutor", "assistant": "assistant", "coach": "coach"}
@@ -40,38 +40,38 @@ RESERVED_IDS = {"default", "user", "worker", "dashboard", "all", "none", "test",
                 "tutor", "assistant", "coach", "chief"}
 
 
-def load_crew() -> dict:
-    return json.loads(CREW_JSON.read_text())
+def load_setup() -> dict:
+    return json.loads(HERMES_SETUP_JSON.read_text())
 
 
 def home_of(profile: str) -> Path:
     return HOME if profile == "default" else HOME / "profiles" / profile
 
 
-def agent(crew: dict, role: str) -> dict:
-    for a in crew.get("agents", []):
+def agent(team: dict, role: str) -> dict:
+    for a in team.get("agents", []):
         if a.get("role") == role:
             return a
-    raise KeyError(f"no agent with role {role} in crew.json")
+    raise KeyError(f"no agent with role {role} in hermes.json")
 
 
-def placeholders(crew: dict) -> dict:
-    o = crew.get("owner", {})
+def placeholders(team: dict) -> dict:
+    o = team.get("owner", {})
     return {
         "{{OWNER}}": o.get("name", "the owner"),
         "{{PRONOUNS}}": o.get("pronouns", "they/them"),
-        "{{CHIEF}}": agent(crew, "chief")["name"],
-        "{{TUTOR}}": agent(crew, "tutor")["name"],
-        "{{ASSISTANT}}": agent(crew, "assistant")["name"],
-        "{{COACH}}": agent(crew, "coach")["name"],
-        "{{TIMEZONE}}": crew.get("timezone", "UTC"),
-        "{{HOME_PLACE}}": (crew.get("home") or {}).get("name") or "not given",
-        "{{STUDIES}}": crew.get("studies") or "not given",
+        "{{CHIEF}}": agent(team, "chief")["name"],
+        "{{TUTOR}}": agent(team, "tutor")["name"],
+        "{{ASSISTANT}}": agent(team, "assistant")["name"],
+        "{{COACH}}": agent(team, "coach")["name"],
+        "{{TIMEZONE}}": team.get("timezone", "UTC"),
+        "{{HOME_PLACE}}": (team.get("home") or {}).get("name") or "not given",
+        "{{STUDIES}}": team.get("studies") or "not given",
     }
 
 
-def render(text: str, crew: dict) -> str:
-    for k, v in placeholders(crew).items():
+def render(text: str, team: dict) -> str:
+    for k, v in placeholders(team).items():
         text = text.replace(k, v)
     left = re.findall(r"\{\{[A-Z_]+\}\}", text)
     if left:
@@ -79,14 +79,14 @@ def render(text: str, crew: dict) -> str:
     return text
 
 
-def check_names(crew: dict) -> list[str]:
-    """What is wrong with crew.json, as sentences ([] = fine)."""
+def check_names(team: dict) -> list[str]:
+    """What is wrong with hermes.json, as sentences ([] = fine)."""
     bad: list[str] = []
     seen_ids: set[str] = set()
     seen_names: set[str] = set()
     for role in ROLES:
         try:
-            a = agent(crew, role)
+            a = agent(team, role)
         except KeyError as e:
             bad.append(str(e))
             continue
@@ -102,29 +102,29 @@ def check_names(crew: dict) -> list[str]:
         seen_names.add(a.get("name", "").lower())
         if a.get("profile") != PROFILE[role]:
             bad.append(f"{role}: profile must be {PROFILE[role]!r}")
-    o = crew.get("owner", {})
+    o = team.get("owner", {})
     if not NAME_RX.match(o.get("name", "")):
         bad.append("owner name must start with a letter (letters, digits, spaces, ' or -)")
     if not ID_RX.match(o.get("id", "")):
         bad.append("owner id must be lowercase letters and digits")
-    if not str(crew.get("telegram_user_id", "")).isdigit():
+    if not str(team.get("telegram_user_id", "")).isdigit():
         bad.append("telegram_user_id is missing")
     return bad
 
 
 # -- config.yaml ---------------------------------------------------------------------------------------------------------------------
 
-def overlay(crew: dict, role: str) -> dict:
+def overlay(team: dict, role: str) -> dict:
     """The settings this kit owns in one agent's config.yaml (the rest stays Hermes's defaults or the owner's own changes)."""
-    owner = crew["owner"]["name"]
-    tg = str(crew["telegram_user_id"])
-    names = ", ".join([owner] + [agent(crew, r)["name"] for r in ROLES])
-    feats = crew.get("features", {})
-    plugins = ["live-time"] + (["openalex"] if role == "tutor" else []) + (["crew-voice"] if feats.get("voice") else [])
+    owner = team["owner"]["name"]
+    tg = str(team["telegram_user_id"])
+    names = ", ".join([owner] + [agent(team, r)["name"] for r in ROLES])
+    feats = team.get("features", {})
+    plugins = ["live-time"] + (["openalex"] if role == "tutor" else []) + (["hermes-voice"] if feats.get("voice") else [])
     o: dict = {
         "model": {"default": "deepseek-flash", "provider": "deepseek", "supports_vision": True},
         "providers": {"deepseek": {"stale_timeout_seconds": 60}},
-        "fallback_providers": [{"provider": "gemini", "model": "gemini-3.8-flash"}] if crew.get("has_gemini") else [],
+        "fallback_providers": [{"provider": "gemini", "model": "gemini-3.8-flash"}] if team.get("has_gemini") else [],
         "model_catalog": {"excluded_providers": ["copilot", "github-copilot", "copilot-acp"]},
         "agent": {"api_max_retries": 1, "reasoning_effort": "medium"},
         "terminal": {"cwd": str(WORKSPACE), "env_passthrough": []},
@@ -151,12 +151,12 @@ def overlay(crew: dict, role: str) -> dict:
         o["platform_toolsets"] = {"cli": ["hermes-cli", "kanban"], "telegram": ["hermes-telegram", "kanban"]}
         o["kanban"] = {"max_in_progress": 2, "auto_decompose": False, "max_in_progress_per_profile": 1}
         o["gateway"] = {"multiplex_profiles": True}
-    if role in ("tutor", "assistant") and (feats.get("moodle") or crew.get("moodle_url")):
+    if role in ("tutor", "assistant") and (feats.get("moodle") or team.get("moodle_url")):
         # Read-only Moodle tools (moodle-cli's MCP server; `submit` is never in the list). The cookie is ${MOODLE_TOKEN} from this
         # profile's own .env, so it never reaches the other agents' shells.
         o["mcp_servers"] = {"moodle": {
             "command": "/data/tools/moodle/node_modules/.bin/moodle", "args": ["--no-cache", "mcp", "serve"],
-            "env": {"MOODLE_BASE_URL": crew.get("moodle_url", ""), "MOODLE_NO_UPDATE_CHECK": "1", "HOME": "/data",
+            "env": {"MOODLE_BASE_URL": team.get("moodle_url", ""), "MOODLE_NO_UPDATE_CHECK": "1", "HOME": "/data",
                     "MOODLE_TOKEN": "${MOODLE_TOKEN}"},
             "tools": {"include": ["home", "due", "units", "unit", "find", "item", "grades", "news", "thread",
                                   "search_forums", "file", "attempt"]},
@@ -164,8 +164,8 @@ def overlay(crew: dict, role: str) -> dict:
         if feats.get("moodle"):
             o["terminal"]["env_passthrough"] = ["MOODLE_TOKEN", "MOODLE_BASE_URL"]
     if feats.get("voice"):
-        voice = (crew.get("voices") or {}).get(role, "")
-        o["tts"] = {"provider": "crew-voice", "voice": voice, "model": "eleven_v4"}
+        voice = (team.get("voices") or {}).get(role, "")
+        o["tts"] = {"provider": "hermes-voice", "voice": voice, "model": "eleven_v4"}
     return o
 
 
@@ -180,15 +180,15 @@ def merge(base: dict, ours: dict) -> dict:
     return out
 
 
-def write_config(crew: dict, role: str) -> bool:
+def write_config(team: dict, role: str) -> bool:
     path = home_of(PROFILE[role]) / "config.yaml"
     old = yaml.safe_load(path.read_text()) if path.exists() else {}
     old = old or {}
-    ours = overlay(crew, role)
+    ours = overlay(team, role)
     theirs_plugins = [p for p in ((old.get("plugins") or {}).get("enabled") or []) if p not in ours["plugins"]["enabled"]]
-    if not crew.get("features", {}).get("voice"):
-        theirs_plugins = [p for p in theirs_plugins if p != "crew-voice"]
-        if (old.get("tts") or {}).get("provider") == "crew-voice":
+    if not team.get("features", {}).get("voice"):
+        theirs_plugins = [p for p in theirs_plugins if p not in ("hermes-voice", "crew-voice")]
+        if (old.get("tts") or {}).get("provider") in ("hermes-voice", "crew-voice"):
             old.pop("tts", None)
     new = merge(old, ours)
     new["plugins"]["enabled"] = ours["plugins"]["enabled"] + theirs_plugins
@@ -199,9 +199,9 @@ def write_config(crew: dict, role: str) -> bool:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
-        shutil.copy2(path, path.with_name("config.yaml.bak-before-crew"))
+        shutil.copy2(path, path.with_name("config.yaml.bak-before-hermes"))
     tmp = path.with_name(".config.yaml.new")
-    tmp.write_text("# Written by agent-automation (vm/crewlib.py). Your own changes to other settings are kept on updates.\n"
+    tmp.write_text("# Written by agent-automation (vm/hermeslib.py). Your own changes to other settings are kept on updates.\n"
                    + yaml.safe_dump(new, sort_keys=False, allow_unicode=True))
     os.replace(tmp, path)
     return True
@@ -209,13 +209,13 @@ def write_config(crew: dict, role: str) -> bool:
 
 # -- files ---------------------------------------------------------------------------------------------------------------------------
 
-def write_souls(crew: dict) -> list[str]:
+def write_souls(team: dict) -> list[str]:
     done = []
     for role in ROLES:
         h = home_of(PROFILE[role])
         soul = h / "SOUL.md"
-        text = render((KIT / "agents" / "souls" / f"{role}.md").read_text(), crew)
-        marker = h / ".crew-soul-template"
+        text = render((KIT / "agents" / "souls" / f"{role}.md").read_text(), team)
+        marker = h / ".hermes-soul-template"
         # Replace Hermes's stock SOUL.md, or ours if it was never edited; never an owner's own edits.
         if not soul.exists() or not marker.exists() or soul.read_text() == marker.read_text():
             if not soul.exists() or soul.read_text() != text:
@@ -225,12 +225,12 @@ def write_souls(crew: dict) -> list[str]:
         user_md = h / "memories" / "USER.md"
         if not user_md.exists() or not user_md.read_text().strip():
             user_md.parent.mkdir(parents=True, exist_ok=True)
-            user_md.write_text(render((KIT / "agents" / "USER.md").read_text(), crew))
+            user_md.write_text(render((KIT / "agents" / "USER.md").read_text(), team))
             done.append(str(user_md))
     return done
 
 
-def copy_tree(src: Path, dst: Path, crew: dict) -> None:
+def copy_tree(src: Path, dst: Path, team: dict) -> None:
     if dst.exists():
         shutil.rmtree(dst)
     dst.mkdir(parents=True)
@@ -239,30 +239,30 @@ def copy_tree(src: Path, dst: Path, crew: dict) -> None:
             continue
         t = dst / f.relative_to(src)
         t.parent.mkdir(parents=True, exist_ok=True)
-        t.write_text(render(f.read_text(), crew)) if f.suffix == ".md" else shutil.copy2(f, t)
+        t.write_text(render(f.read_text(), team)) if f.suffix == ".md" else shutil.copy2(f, t)
 
 
-def write_skills(crew: dict) -> list[str]:
+def write_skills(team: dict) -> list[str]:
     s = KIT / "agents" / "skills"
-    feats = crew.get("features", {})
+    feats = team.get("features", {})
     done = []
     for role in ROLES:
         h = home_of(PROFILE[role]) / "skills"
-        copy_tree(s / "roles" / ROLE_SKILL[role], h / "roles" / ROLE_SKILL[role], crew)
+        copy_tree(s / "roles" / ROLE_SKILL[role], h / "roles" / ROLE_SKILL[role], team)
         done.append(f"{PROFILE[role]}: {ROLE_SKILL[role]}")
         if role in ("chief", "assistant", "coach"):
-            copy_tree(s / "productivity" / "weather-forecast", h / "productivity" / "weather-forecast", crew)
+            copy_tree(s / "productivity" / "weather-forecast", h / "productivity" / "weather-forecast", team)
         gmail = h / "email" / "gmail-reader"
         if role in ("chief", "assistant") and feats.get("gmail"):
-            copy_tree(s / "email" / "gmail-reader", gmail, crew)
+            copy_tree(s / "email" / "gmail-reader", gmail, team)
         elif gmail.exists():
             shutil.rmtree(gmail)
     return done
 
 
-def write_workspace(crew: dict) -> None:
+def write_workspace(team: dict) -> None:
     WORKSPACE.mkdir(parents=True, exist_ok=True)
-    (WORKSPACE / "AGENTS.md").write_text(render((KIT / "agents" / "AGENTS.md").read_text(), crew))
+    (WORKSPACE / "AGENTS.md").write_text(render((KIT / "agents" / "AGENTS.md").read_text(), team))
     for d in (HOME / "owner", HOME / "owner" / "study", HOME / "owner" / ".secrets"):
         d.mkdir(parents=True, exist_ok=True)
     os.chmod(HOME / "owner" / ".secrets", 0o700)
@@ -310,24 +310,24 @@ def main(argv: list[str]) -> int:
         return 0
     if cmd == "env-has":
         return 0 if env_has(Path(argv[1]), argv[2]) else 1
-    crew = load_crew()
+    team = load_setup()
     if cmd == "check-names":
-        bad = check_names(crew)
+        bad = check_names(team)
         print("\n".join(bad))
         return 1 if bad else 0
     if cmd == "configs":
         for role in ROLES:
-            print(f"{PROFILE[role]}: {'updated' if write_config(crew, role) else 'unchanged'}")
+            print(f"{PROFILE[role]}: {'updated' if write_config(team, role) else 'unchanged'}")
     elif cmd == "souls":
-        for f in write_souls(crew):
+        for f in write_souls(team):
             print("wrote", f)
     elif cmd == "skills":
-        for f in write_skills(crew):
+        for f in write_skills(team):
             print("skills", f)
     elif cmd == "workspace":
-        write_workspace(crew)
+        write_workspace(team)
     elif cmd == "briefing":
-        print(render((KIT / "agents" / "morning-briefing.md").read_text(), crew).strip())
+        print(render((KIT / "agents" / "morning-briefing.md").read_text(), team).strip())
     else:
         print(f"unknown command {cmd}", file=sys.stderr)
         return 2

@@ -10,8 +10,8 @@ metadata:
 
 A fixed script fetches the forecast from Open-Meteo (free, no account). It only reads
 weather data. With no place given it uses {{OWNER}}'s home place from
-`/data/.hermes/crew.json`; times are {{TIMEZONE}}, temperatures in C, rain in mm, wind in
-km/h (mph if crew.json sets `"wind_unit": "mph"`).
+`/data/.hermes/hermes.json`; times are {{TIMEZONE}}, temperatures in C, rain in mm, wind in
+km/h (mph if hermes.json sets `"wind_unit": "mph"`).
 
 ## Commands
 
@@ -33,7 +33,7 @@ python3 /data/tools/weather/forecast.py day --lat 51.50 --lon -0.12
 - A place name is looked up on the fly; a match near home wins over a bigger place far away.
   Check the place printed on the first line: if it is the wrong town (a namesake in another
   country), use `--lat` and `--lon` or ask {{OWNER}} where.
-- "No place given and no home place set": the home place is missing from crew.json. Give a
+- "No place given and no home place set": the home place is missing from hermes.json. Give a
   place name, and tell {{OWNER}} the home place needs setting in the kit's setup.
 
 ## How to use it

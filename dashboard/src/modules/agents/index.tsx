@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useChief } from '@/telemetry/crew'
+import { useChief } from '@/telemetry/team'
 import { useAgentMesh } from '@/telemetry/hooks/feeds'
 import { useMode } from '@/telemetry/mode'
 import { FeedError, FeedStatus } from '@/ui/FeedStatus'

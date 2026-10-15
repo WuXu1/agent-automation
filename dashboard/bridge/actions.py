@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import crew
+import team
 
 PROFILE_RE = re.compile(r"^[a-z][a-z0-9]{1,23}$")
 MODEL_RE = re.compile(r"^[A-Za-z0-9._:/-]{1,60}$")
@@ -34,8 +34,8 @@ RESERVED = {"default", "commander", "user", "worker", "owner", "helper", "dashbo
 
 
 def reserved(env: "Env") -> set[str]:
-    """Names a new profile may not take: the fixed ones, the crew's agent ids and the owner's Mem0 id (crew.json)."""
-    c = crew.load(env.hermes_home)
+    """Names a new profile may not take: the fixed ones, the team's agent ids and the owner's Mem0 id (hermes.json)."""
+    c = team.load(env.hermes_home)
     return RESERVED | {a["id"] for a in c["agents"]} | {c["owner"]["id"]}
 LIMITS = {"name": 40, "description": 600, "soul": 20_000, "brief": 4000, "title": 200, "body": 4000, "answer": 2000}
 
@@ -343,7 +343,7 @@ def agent_detail(env: Env, profile: str) -> dict:
         "model": model,
         "effort": effort,
         "telegram": bool(re.search(r"(?m)^TELEGRAM_BOT_TOKEN=\S", env_text)),
-        "core": profile in crew.core_profiles(env.hermes_home),
+        "core": profile in team.core_profiles(env.hermes_home),
         "reportsTo": manager_of(load_org(env), env.profiles(), profile),
     }
 
@@ -477,7 +477,7 @@ def delete_agent(env: Env, profile: str, args: dict) -> dict:
     if profile not in env.profiles():
         raise ActionError(404, "No such agent")
     if profile == "default":
-        raise ActionError(403, f"{crew.name_of(env.hermes_home, 'default')} (the chief) cannot be deleted")
+        raise ActionError(403, f"{team.name_of(env.hermes_home, 'default')} (the chief) cannot be deleted")
     if args.get("confirm") != profile:
         raise ActionError(400, "Type the agent's profile id to confirm")
     with _lock:
@@ -540,7 +540,7 @@ def _gateway(env: Env, method: str, path: str, body: dict | None = None, headers
 
 def brief_chief(env: Env, args: dict) -> dict:
     text = _clean(args.get("text"), "brief")
-    run = _gateway(env, "POST", "/v1/runs", {"input": text, "instructions": brief_instructions(crew.owner_name(env.hermes_home)),
+    run = _gateway(env, "POST", "/v1/runs", {"input": text, "instructions": brief_instructions(team.owner_name(env.hermes_home)),
                                              "session_id": "hermes-dash"},
                    {"Idempotency-Key": uuid.uuid4().hex})
     run_id = run.get("run_id")
@@ -590,7 +590,7 @@ def answer_card(env: Env, card_id: str, args: dict) -> dict:
         raise ActionError(400, "That is not a card id")
     text = _clean(args.get("text"), "answer")
     with _lock:
-        cli(env, "kanban", "unblock", f"--reason={crew.owner_name(env.hermes_home)} (dashboard): {text}", "--", card_id)
+        cli(env, "kanban", "unblock", f"--reason={team.owner_name(env.hermes_home)} (dashboard): {text}", "--", card_id)
         log_action(env, "card-answered", card=card_id, chars=len(text))
     return {"ok": True}
 
@@ -717,10 +717,10 @@ def _chat_board(env: Env, org: dict, profile: str, on: bool) -> None:
 
 def team_skill(env: Env, org: dict, profiles: list[str], lead: str) -> str:
     me = profile_meta(env, lead)
-    owner = crew.owner_name(env.hermes_home)
-    name = me.get("display_name") or crew.name_of(env.hermes_home, lead)
+    owner = team.owner_name(env.hermes_home)
+    name = me.get("display_name") or team.name_of(env.hermes_home, lead)
     boss = manager_of(org, profiles, lead)
-    boss_name = (profile_meta(env, boss).get("display_name") or crew.name_of(env.hermes_home, boss)) if boss else None
+    boss_name = (profile_meta(env, boss).get("display_name") or team.name_of(env.hermes_home, boss)) if boss else None
     rows = []
     for p in reports_of(org, profiles, lead):
         meta = profile_meta(env, p)
@@ -811,7 +811,7 @@ def set_manager(env: Env, profile: str, boss: Any, org: dict | None = None) -> d
     """Move `profile` under `boss`. Refuses the chief, unknown agents and loops."""
     profiles = env.profiles()
     if profile == "default":
-        raise ActionError(400, f"The chief leads everyone and reports to {crew.owner_name(env.hermes_home)}")
+        raise ActionError(400, f"The chief leads everyone and reports to {team.owner_name(env.hermes_home)}")
     if not isinstance(boss, str) or boss not in profiles:
         raise ActionError(400, "Pick an existing agent as the lead")
     org = org or load_org(env)

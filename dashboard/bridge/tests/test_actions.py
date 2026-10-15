@@ -13,10 +13,10 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # crewfix
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # hermesfix
 import actions  # noqa: E402
 import bridge  # noqa: E402
-from crewfix import write_crew  # noqa: E402
+from hermesfix import write_setup  # noqa: E402
 
 FAKE_HERMES = r'''#!/usr/bin/env python3
 """Just enough of the hermes CLI for the bridge's actions. Records every call in $HERMES_HOME/cli.log."""
@@ -170,7 +170,7 @@ class ActionsTest(unittest.TestCase):
         self.home = Path(tmp.name) / "hermes"
         coach = self.home / "profiles" / "coach"
         coach.mkdir(parents=True)
-        write_crew(self.home)
+        write_setup(self.home)
         (self.home / ".env").write_text("API_SERVER_KEY=chief-key\nOTHER=x\n")
         (self.home / "config.yaml").write_text(CONFIG)
         (coach / "config.yaml").write_text(CONFIG)
@@ -239,7 +239,7 @@ class ActionsTest(unittest.TestCase):
     def test_create_refuses(self):
         for args, why in (({"profile": "Nora!", "name": "N", "description": "d"}, "id"),
                           ({"profile": "default", "name": "N", "description": "d"}, "reserved"),
-                          ({"profile": "atlas", "name": "N", "description": "d", "from": "coach"}, "a crew id from crew.json"),
+                          ({"profile": "atlas", "name": "N", "description": "d", "from": "coach"}, "a team id from hermes.json"),
                           ({"profile": "sam", "name": "N", "description": "d", "from": "coach"}, "the owner's Mem0 id"),
                           ({"profile": "coach", "name": "N", "description": "d", "from": "coach"}, "exists"),
                           ({"profile": "nora", "name": "N", "description": "d", "from": "default"}, "the chief as source"),
@@ -312,7 +312,7 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual(out, {"runId": "run_abc1"})
         _, path, body = self.gw.seen[0]
         self.assertEqual((path, body["input"], body["session_id"]), ("/v1/runs", "Book the lane for Friday.", "hermes-dash"))
-        self.assertIn("This message is from Sam", body["instructions"])       # the owner's name from crew.json
+        self.assertIn("This message is from Sam", body["instructions"])       # the owner's name from hermes.json
         self.assertEqual(actions.chief_run(self.env, "run_abc1"), {"status": "completed", "output": "On it, Sam."})
         with self.assertRaises(actions.ActionError):
             actions.chief_run(self.env, "../../x")
@@ -367,7 +367,7 @@ class ActionsTest(unittest.TestCase):
         self.assertIn("`nora`", chief)
         self.assertIn("`coach`", chief)                            # the chief's list has everyone directly under it
         self.assertNotIn("`lena`", chief)
-        self.assertIn("You are Atlas (`default`)", chief)          # names from crew.json
+        self.assertIn("You are Atlas (`default`)", chief)          # names from hermes.json
         self.assertIn("You report to Sam.", chief)
         self.assertIn("still needs Sam's yes", chief)
         self.assertIn("`lena`", nora)
@@ -440,7 +440,7 @@ class ActionsTest(unittest.TestCase):
         self.assertEqual((status, json.loads(out)["effort"]), (200, "low"))
         status, _, out = app.handle("GET", "/api/agents/coach", ok, b"")
         self.assertEqual(json.loads(out)["soul"], "You are Rocky.\n")
-        status, _, out = app.handle("GET", "/api/agents/rocky", ok, b"")              # the page may use the crew's agent id
+        status, _, out = app.handle("GET", "/api/agents/rocky", ok, b"")              # the page may use the team's agent id
         self.assertEqual((status, json.loads(out)["profile"]), (200, "coach"))
         self.assertEqual(app.handle("GET", "/api/agents/nobody", ok, b"")[0], 404)
         self.assertEqual(app.handle("DELETE", "/api/agents/atlas", ok, json.dumps({"confirm": "default"}).encode())[0], 403)

@@ -2,7 +2,7 @@ import { Command, Volume2, VolumeX } from 'lucide-react'
 import { IconButton } from '@/ui/Button'
 import { Kbd } from '@/ui/Kbd'
 import { clock, dayDate } from '@/lib/time'
-import { useCrew } from '@/telemetry/crew'
+import { useTeam } from '@/telemetry/team'
 import { useNow } from '@/lib/useNow'
 import { ModeSwitch } from './ModeSwitch'
 import { useApp } from './store'
@@ -10,7 +10,7 @@ import { useCurrentView, VIEW_BY_ID } from './views'
 
 function Clock() {
   const now = useNow(1000)
-  const tz = useCrew((s) => s.crew.timezone)
+  const tz = useTeam((s) => s.team.timezone)
   return (
     <div className="hidden text-right leading-tight sm:block" aria-label={`Time in ${tz.replace(/_/g, ' ')}`}>
       <div className="num text-[13px] text-ink">{clock(now)}</div>

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { cn } from '@/lib/cn'
 import { BrainView } from '@/modules/brain/BrainView'
-import { useCrew } from '@/telemetry/crew'
+import { useTeam } from '@/telemetry/team'
 import { useMem0Graph } from '@/telemetry/hooks/useMem0Graph'
 import { useMode } from '@/telemetry/mode'
 import { useRegistry } from '@/telemetry/registry'
@@ -25,7 +25,7 @@ const VIEW = {
 }
 
 export function Shell() {
-  // an add-on's view (the Inbox) opens only when crew.json switches the add-on on
+  // an add-on's view (the Inbox) opens only when hermes.json switches the add-on on
   const view = useCurrentView(useApp((s) => s.view))
   const probe = useMode((s) => s.probe)
   const onBrain = view === 'brain'
@@ -34,8 +34,8 @@ export function Shell() {
   useEffect(() => { void probe() }, [probe])
   // the composer's tidy default and the dashboard model come from Settings
   const mode = useMode((s) => s.mode)
-  const loadCrew = useCrew((s) => s.load)
-  useEffect(() => { void loadCrew(mode) }, [mode, loadCrew])
+  const loadTeam = useTeam((s) => s.load)
+  useEffect(() => { void loadTeam(mode) }, [mode, loadTeam])
   const loadSettings = useSettings((s) => s.load)
   useEffect(() => { void loadSettings() }, [mode, loadSettings])
   const loadRegistry = useRegistry((s) => s.load)

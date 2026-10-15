@@ -1,5 +1,5 @@
 import { Bot, Gauge, Inbox, KanbanSquare, Orbit, Plug, Settings, type LucideIcon } from 'lucide-react'
-import { useCrew, type Features } from '@/telemetry/crew'
+import { useTeam, type Features } from '@/telemetry/team'
 
 export type ViewId = 'brain' | 'agents' | 'infra' | 'board' | 'inbox' | 'integrations' | 'settings'
 
@@ -19,7 +19,7 @@ export interface View {
   short: string
   icon: LucideIcon
   hint: string
-  /** Shown only when this add-on is switched on in crew.json. */
+  /** Shown only when this add-on is switched on in hermes.json. */
   feature?: keyof Features
 }
 
@@ -40,14 +40,14 @@ export const VIEW_BY_ID = new Map<ViewId, View>(ALL_VIEWS.map((v) => [v.id, v]))
 
 /** The view on screen: the one asked for, or the Second Brain when it belongs to an add-on that is switched off. */
 export function useCurrentView(wanted: ViewId): ViewId {
-  const features = useCrew((s) => s.crew.features)
+  const features = useTeam((s) => s.team.features)
   const needs = VIEW_BY_ID.get(wanted)?.feature
   return needs && !features[needs] ? 'brain' : wanted
 }
 
-/** The views this install shows (an add-on's view only when crew.json switches it on). */
+/** The views this install shows (an add-on's view only when hermes.json switches it on). */
 export function useVisibleViews(): { views: View[]; all: View[] } {
-  const features = useCrew((s) => s.crew.features)
+  const features = useTeam((s) => s.team.features)
   const views = VIEWS.filter((v) => !v.feature || features[v.feature])
   return { views, all: [...views, SETTINGS_VIEW] }
 }

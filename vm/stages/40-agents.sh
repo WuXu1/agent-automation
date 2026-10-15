@@ -1,13 +1,13 @@
 # shellcheck shell=bash
-# Stage: the four agents' settings, personalities, skills and tools, from crew.json and the kit's templates.
+# Stage: the four agents' settings, personalities, skills and tools, from hermes.json and the kit's templates.
 
 stage_agents() {
   step "Setting up your four agents"
-  local bad; bad="$(as_hermes "$HPY" -I "$KIT/vm/crewlib.py" check-names)" || die "crew.json has a problem: $bad (run the installer again to re-answer)"
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs | sed 's/^/    /'
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" souls | sed 's/^/    /'
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" skills >/dev/null
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" workspace
+  local bad; bad="$(as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" check-names)" || die "hermes.json has a problem: $bad (run the installer again to re-answer)"
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" configs | sed 's/^/    /'
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" souls | sed 's/^/    /'
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" skills >/dev/null
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" workspace
   local prof skill
   for prof in default tutor assistant coach; do
     case "$prof" in default) skill=team-lead ;; *) skill=$prof ;; esac

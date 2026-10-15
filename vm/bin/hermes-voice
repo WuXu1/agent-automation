@@ -12,18 +12,18 @@ set -euo pipefail
 install_plugin() {   # the plugin, copied into every agent's home, with voices.json naming whose voice is whose
   local role prof dst
   for role in $ROLES; do
-    prof="$(profile_of "$role")"; dst="$(home_of "$prof")/plugins/crew-voice"
+    prof="$(profile_of "$role")"; dst="$(home_of "$prof")/plugins/hermes-voice"
     install -d -o hermes -g hermes -m 755 "$dst"
-    install -o hermes -g hermes -m 644 "$KIT"/vm/plugins/crew-voice/{__init__.py,jv_eleven.py,jv_speech.py,plugin.yaml,STYLE.md} "$dst/"
+    install -o hermes -g hermes -m 644 "$KIT"/vm/plugins/hermes-voice/{__init__.py,jv_eleven.py,jv_speech.py,plugin.yaml,STYLE.md} "$dst/"
     jq --arg role "$role" '. as $c | {default_voice: ($c.voices[$role] // ""), default_model: "eleven_v4", owner: $c.owner.name,
         personas: ([$c.agents[] | {key: ($c.voices[.role] // ""), value: "\(.name), \($c.owner.name)'"'"'s \(.title | ascii_downcase)"}]
-                   | map(select(.key != "")) | from_entries)}' "$CREW_JSON" | install -o hermes -g hermes -m 644 /dev/stdin "$dst/voices.json"
+                   | map(select(.key != "")) | from_entries)}' "$HERMES_SETUP_JSON" | install -o hermes -g hermes -m 644 /dev/stdin "$dst/voices.json"
   done
 }
 
 if [ "${1:-}" = off ]; then
   cj_set '.features.voice' false
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" configs >/dev/null
   ok "Voice replies off."; /usr/local/bin/hermes-restart || true; exit 0
 fi
 
@@ -64,7 +64,7 @@ for role in $ROLES; do
 done
 cj_set '.features.voice' true
 install_plugin
-as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
+as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" configs >/dev/null
 
 # Each chat: voice note in -> voice note back; typed message -> text (the agents' /voice command changes it per chat).
 # One file for the whole gateway: "telegram:<id>" is the chief's chat, "<profile>:telegram:<id>" the others'. Existing

@@ -1,7 +1,7 @@
 """Read-only feeds for the dashboard's Agent Studio, Runway and Board (shapes: dashboard/src/telemetry/types.ts).
 
 Everything here only reads: /proc, `systemctl show`/`list-timers`, the board's SQLite file (opened mode=ro) and the
-agents' config.yaml files. Nothing is written, restarted or sent anywhere. Agent names come from crew.json (crew.py).
+agents' config.yaml files. Nothing is written, restarted or sent anywhere. Agent names come from hermes.json (team.py).
 """
 from __future__ import annotations
 
@@ -20,11 +20,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 
-import crew
+import team
 
 SERVICES = ["hermes-gateway", "mem0-server", "postgresql", "hermes-dash", "tailscaled"]
 CLEANABLE = ["/data/.hermes/installs", "/data/.hermes/tools", "/data/backups"]
-OWNER = "owner"            # the person the crew works for, on the board and in hand-offs (the page shows their name)
+OWNER = "owner"            # the person the team works for, on the board and in hand-offs (the page shows their name)
 DAY = 86_400
 
 
@@ -69,15 +69,15 @@ def _get_json(url: str, timeout: float = 2.0) -> Any:
 
 
 def _agent(profile: Any, known: set[str] | frozenset = frozenset(), hermes_home: str = "/data/.hermes") -> str | None:
-    """A profile (or agent id) -> the crew's agent id (default -> the chief's id); an agent added later is known by its profile id."""
+    """A profile (or agent id) -> the team's agent id (default -> the chief's id); an agent added later is known by its profile id."""
     p = str(profile or "").lower()
-    return crew.profile_agent(crew.load(hermes_home)).get(p) or (p if p in known else None)
+    return team.profile_agent(team.load(hermes_home)).get(p) or (p if p in known else None)
 
 
 def known_profiles(hermes_home: str) -> list[str]:
     root = Path(hermes_home) / "profiles"
     found = [d.name for d in root.iterdir() if d.is_dir() and re.match(r"^[a-z][a-z0-9]{1,23}$", d.name)] if root.is_dir() else []
-    core = [p for p in crew.core_profiles(hermes_home) if p != "default"]   # crew.json's order; later agents after, by name
+    core = [p for p in team.core_profiles(hermes_home) if p != "default"]   # hermes.json's order; later agents after, by name
     return ["default", *[p for p in core if p in found], *sorted(p for p in found if p not in core)]
 
 
@@ -131,7 +131,7 @@ def read_board_rows(paths: Paths, now: float) -> tuple[list[dict], list[dict]]:
     if not os.path.exists(paths.kanban_db):
         return [], []
     known = set(known_profiles(paths.hermes_home))
-    chief = crew.chief(crew.load(paths.hermes_home))["id"]
+    chief = team.chief(team.load(paths.hermes_home))["id"]
 
     def ag(profile: Any) -> str | None:
         return _agent(profile, known, paths.hermes_home)
@@ -318,9 +318,9 @@ def agents(paths: Paths, now: float | None = None) -> dict:
     out = []
     profiles = known_profiles(paths.hermes_home)
     org = actions.load_org(actions.Env(hermes_home=paths.hermes_home, state_dir=str(Path(paths.hermes_home) / "hermes-dash")))
-    c = crew.load(paths.hermes_home)
-    to_agent = crew.profile_agent(c)
-    core = set(crew.core_profiles(paths.hermes_home))
+    c = team.load(paths.hermes_home)
+    to_agent = team.profile_agent(c)
+    core = set(team.core_profiles(paths.hermes_home))
     for profile in profiles:
         agent = to_agent.get(profile) or profile
         cfg = Path(paths.hermes_home) / ("config.yaml" if profile == "default" else f"profiles/{profile}/config.yaml")
@@ -333,7 +333,7 @@ def agents(paths: Paths, now: float | None = None) -> dict:
         mine = [c for c in cards if c["assignee"] == agent]
         last = max([c["completedAt"] or c["startedAt"] or 0 for c in mine] or [0])
         out.append({
-            "id": agent, "profile": profile, "name": meta.get("display_name") or crew.name_of(paths.hermes_home, profile),
+            "id": agent, "profile": profile, "name": meta.get("display_name") or team.name_of(paths.hermes_home, profile),
             "description": meta.get("description", "")[:600], "core": profile in core,
             "reportsTo": (lambda b: None if b is None else to_agent.get(b) or b)(actions.manager_of(org, profiles, profile)),
             "model": model_default(text), "effort": effort.group(1).strip("'\"") if effort else None, "mcp": mcp_servers(text),
@@ -344,7 +344,7 @@ def agents(paths: Paths, now: float | None = None) -> dict:
             "lastActive": last or None,
             **agent_runs(paths, profile, now),
         })
-    return {"at": int(now * 1000), "gateway": gateway, "agents": out, "handoffs": handoffs, "talks": talks(cards, crew.chief(c)["id"])}
+    return {"at": int(now * 1000), "gateway": gateway, "agents": out, "handoffs": handoffs, "talks": talks(cards, team.chief(c)["id"])}
 
 
 # -- C. infra -----------------------------------------------------------------------------------------------------------------

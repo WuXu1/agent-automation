@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { registryApi, type Registry } from './tools'
 
-// Names and labels the VM cannot tell (dashboard/bridge/registry.json, served at /api/registry with the crew's ids). Live mode
+// Names and labels the VM cannot tell (dashboard/bridge/registry.json, served at /api/registry with the team's ids). Live mode
 // reads the VM's copy once per mode, so what is added to the registry shows after a reload; demo mode, and a bridge that
-// cannot answer, use the copy below (written for the demo crew).
+// cannot answer, use the copy below (written for the demo team).
 export const DEFAULT_REGISTRY: Registry = {
   tools: [
     { key: 'kanban', label: 'Board', who: ['atlas'], rule: 'the chief creates and hands out cards' },
@@ -18,7 +18,7 @@ export const DEFAULT_REGISTRY: Registry = {
   },
   roles: { atlas: 'Chief of Staff', sage: 'Tutor', ivy: 'Assistant', rocky: 'Coach' },
   teams: [
-    { id: 'crew', label: 'Specialists', members: ['sage', 'ivy', 'rocky'], note: 'one specialist each; the chief hands them cards' },
+    { id: 'specialists', label: 'Specialists', members: ['sage', 'ivy', 'rocky'], note: 'one specialist each; the chief hands them cards' },
   ],
   services: {
     'hermes-gateway': { label: 'Agents: Telegram and the API', port: 8642, described: true },

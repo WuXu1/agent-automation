@@ -2,7 +2,7 @@
 # Shared helpers for the laptop side (install.sh, hermes). Sourced, not run. Plain bash 3.2+ (the version macOS ships).
 
 KIT_DIR="${KIT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-STATE_DIR="${CREW_STATE_DIR:-$HOME/.agent-automation}"
+STATE_DIR="${HERMES_SETUP_STATE_DIR:-$HOME/.agent-automation}"
 STATE_FILE="$STATE_DIR/settings"            # plain KEY=value lines, no secrets ever
 SSH_KEY="$STATE_DIR/id_ed25519"
 mkdir -p "$STATE_DIR" && chmod 700 "$STATE_DIR"

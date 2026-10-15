@@ -1,10 +1,10 @@
 # shellcheck shell=bash
-# Stage: the owner's answers (name, pronouns, place, the agents' names). Saved in /data/.hermes/crew.json, which holds no secrets.
+# Stage: the owner's answers (name, pronouns, place, the agents' names). Saved in /data/.hermes/hermes.json, which holds no secrets.
 
 stage_questions() {
   step "About you and your agents"
-  if [ -s "$CREW_JSON" ] && [ -n "$(cj .owner.name)" ] && [ -n "$(cj '.agents[3].name')" ]; then
-    ok "Answers saved before: $(cj .owner.name), with $(jq -r '[.agents[].name] | join(", ")' "$CREW_JSON")"
+  if [ -s "$HERMES_SETUP_JSON" ] && [ -n "$(cj .owner.name)" ] && [ -n "$(cj '.agents[3].name')" ]; then
+    ok "Answers saved before: $(cj .owner.name), with $(jq -r '[.agents[].name] | join(", ")' "$HERMES_SETUP_JSON")"
     confirm "Keep them?" y && return 0
   fi
   install -d -o hermes -g hermes -m 700 "$HH"
@@ -66,6 +66,6 @@ stage_questions() {
   # The Tailscale account that owns this server is the only one the dashboard lets in.
   local login; login="$(tailscale status --json 2>/dev/null | jq -r '.User[(.Self.UserID|tostring)].LoginName // empty')"
   [ -n "$login" ] && cj_set '.owner.tailscale_login' "$(jstr "$login")"
-  chown hermes:hermes "$CREW_JSON"; chmod 640 "$CREW_JSON"
-  ok "Saved: you are $name ($pron); your agents are $(jq -r '[.agents[].name] | join(", ")' "$CREW_JSON")"
+  chown hermes:hermes "$HERMES_SETUP_JSON"; chmod 640 "$HERMES_SETUP_JSON"
+  ok "Saved: you are $name ($pron); your agents are $(jq -r '[.agents[].name] | join(", ")' "$HERMES_SETUP_JSON")"
 }

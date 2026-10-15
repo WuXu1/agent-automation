@@ -26,7 +26,7 @@ everything back, on the same server or on a brand-new one.
 |---|---|
 | Your four agents: personalities, settings, their keys (`.env`), chat history, the board, scheduled jobs | `/data/.hermes` (and `/data/.hermes/profiles/…`) |
 | Your notebooks | `/data/.hermes/owner/` |
-| Your settings (`crew.json`: your name, timezone, add-ons) | `/data/.hermes/crew.json` |
+| Your settings (`hermes.json`: your name, timezone, add-ons) | `/data/.hermes/hermes.json` |
 | The shared memory ("second brain"): its database and settings | Postgres databases `mem0` and `mem0_app`, `/data/.hermes/mem0-server` |
 | Files the agents made for you | `/data/workspace` |
 | The tools' data (e.g. the Gmail sign-in) | `/data/tools` |

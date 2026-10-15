@@ -24,7 +24,7 @@ case "$cmd" in
   status|doctor) need_vm; vm_ssh "sudo hermes-doctor" ;;
   dashboard)
     need_vm
-    url="$(vm_ssh "sudo jq -r '.dashboard_url // empty' /data/.hermes/crew.json")"
+    url="$(vm_ssh "sudo jq -r '.dashboard_url // empty' /data/.hermes/hermes.json")"
     [ -n "$url" ] || die "The dashboard isn't set up yet: ./hermes update"
     say "Dashboard: $url   (works on any of your devices with Tailscale on)"
     (open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || cmd.exe /c start "$url" 2>/dev/null || true) ;;
@@ -37,7 +37,7 @@ case "$cmd" in
     else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./hermes update."; fi
     need_vm
     ship_kit && ok "Kit copied to the server"
-    vm_ssh -t "sudo CREW_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty ;;
+    vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty ;;
   key)   [ -n "${1:-}" ] || die "Which key? deepseek, gemini, elevenlabs, telegram-chief, telegram-tutor, telegram-assistant, telegram-coach"
          remote "sudo hermes-key $1" ;;
   voice) remote "sudo hermes-voice ${1:-}" ;;

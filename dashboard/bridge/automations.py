@@ -10,7 +10,7 @@ import json
 import re
 from typing import Any
 
-import crew
+import team
 from actions import ActionError, Env, _lock, _read, cli, log_action
 
 JOB_RE = re.compile(r"^[a-f0-9]{8,32}$")
@@ -75,7 +75,7 @@ def list_all(env: Env) -> dict:
 
 
 def _profile(env: Env, profile: str) -> str:
-    profile = crew.profile_of(env.hermes_home, profile)
+    profile = team.profile_of(env.hermes_home, profile)
     if profile not in env.profiles():
         raise ActionError(404, "No such agent")
     return profile

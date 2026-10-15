@@ -1,5 +1,5 @@
 import { BUILTIN_SECTIONS, classify, tokens, type Section } from './clusters'
-import { crewNow } from './crew'
+import { teamNow } from './team'
 import type { ClusterId, Memory } from './types'
 import { hash, rng } from '@/lib/rng'
 
@@ -36,7 +36,7 @@ const STOP = new Set(('the a an and or of to in on at for with is are was be he 
   'when if has have had will can should into about than then there their they them who what which also only one').split(' '))
 
 function contentWords(text: string): Set<string> {
-  const owner = crewNow().owner.name.toLowerCase()            // notes are written about the owner: their name links nothing
+  const owner = teamNow().owner.name.toLowerCase()            // notes are written about the owner: their name links nothing
   return new Set(tokens(text).filter((w) => w.length > 2 && !STOP.has(w) && w !== owner))
 }
 

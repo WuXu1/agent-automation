@@ -6,9 +6,9 @@ Usage:
   forecast.py day  [PLACE] [--date YYYY-MM-DD] [--hours 7-10]   hourly lines for one day (default today, 06-22)
   forecast.py week [PLACE] [--days N]         one line per day (default 7, max 16)
 PLACE is a name ("Leeds", "Central Park") or --lat X --lon Y. Default: the home place in
-/data/.hermes/crew.json ("home": {"name", "lat", "lon"}). Times are in crew.json's
+/data/.hermes/hermes.json ("home": {"name", "lat", "lon"}). Times are in hermes.json's
 "timezone" (UTC if unset), temperatures in C, rain in mm, wind in km/h (or mph when
-crew.json has "wind_unit": "mph").
+hermes.json has "wind_unit": "mph").
 Standard library only.
 """
 import argparse
@@ -21,7 +21,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-CREW_JSON = os.environ.get("CREW_JSON", "/data/.hermes/crew.json")
+HERMES_SETUP_JSON = os.environ.get("HERMES_SETUP_JSON", "/data/.hermes/hermes.json")
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 NEARBY_KM = 300  # a name match this close to home beats a bigger place far away
@@ -41,9 +41,9 @@ class UsageError(Exception):
 
 
 def load_config(path=None):
-    """crew.json as a dict; {} when it is missing or unreadable."""
+    """hermes.json as a dict; {} when it is missing or unreadable."""
     try:
-        with open(path or CREW_JSON, encoding="utf-8") as f:
+        with open(path or HERMES_SETUP_JSON, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
     except (OSError, ValueError):
@@ -51,7 +51,7 @@ def load_config(path=None):
 
 
 def home_place(config):
-    """(name, lat, lon) from crew.json's "home", or None."""
+    """(name, lat, lon) from hermes.json's "home", or None."""
     home = config.get("home")
     if not isinstance(home, dict):
         return None
@@ -62,7 +62,7 @@ def home_place(config):
 
 
 def timezone_of(config):
-    """(ZoneInfo, name) from crew.json's "timezone"; UTC when unset or unknown."""
+    """(ZoneInfo, name) from hermes.json's "timezone"; UTC when unset or unknown."""
     name = config.get("timezone") or "UTC"
     try:
         return ZoneInfo(name), name
@@ -106,7 +106,7 @@ def resolve_place(name, lat, lon, config, geocode=None):
     home = home_place(config)
     if not name or (home and name.strip().lower() == home[0].lower()):
         if not home:
-            raise UsageError(f"No place given and no home place set in {CREW_JSON}. "
+            raise UsageError(f"No place given and no home place set in {HERMES_SETUP_JSON}. "
                              "Give a place name or --lat/--lon.")
         return home
     if geocode is None:

@@ -2,7 +2,7 @@
 
 ## This kit
 `./hermes update` on your computer: it pulls the latest kit from GitHub, copies it to the server and re-runs the server install
-without questions. Your answers (`crew.json`), keys, memory, chats and your own `SOUL.md` edits are kept; role skills, settings
+without questions. Your answers (`hermes.json`), keys, memory, chats and your own `SOUL.md` edits are kept; role skills, settings
 the kit owns and the dashboard are refreshed. If something needs a new key, it tells you to run `./install.sh`.
 
 ## Hermes itself (pinned on purpose)

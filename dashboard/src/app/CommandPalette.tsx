@@ -5,7 +5,7 @@ import { useBrief } from './brief'
 import { useBrainUi } from '@/modules/brain/store'
 import { useBrain } from '@/telemetry/hooks/useMem0Graph'
 import { useMode } from '@/telemetry/mode'
-import { useChief } from '@/telemetry/crew'
+import { useChief } from '@/telemetry/team'
 import { useApp } from './store'
 import { useVisibleViews } from './views'
 

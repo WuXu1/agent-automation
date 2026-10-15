@@ -107,8 +107,8 @@ if [ "${codes[0]}" != 0 ] || [ "${codes[1]}" != 0 ]; then die "The backup couldn
 [ -d "$X/data/.hermes" ] || die "This archive has no /data/.hermes in it; it isn't an agent-automation backup. Nothing was changed."
 
 # 3. the big question
-bowner="$(jq -r '.owner.name // empty' "$X/data/.hermes/crew.json" 2>/dev/null || true)"
-bagents="$(jq -r '[.agents[]?.name] | join(", ")' "$X/data/.hermes/crew.json" 2>/dev/null || true)"
+bowner="$(jq -r '.owner.name // empty' "$X/data/.hermes/hermes.json" 2>/dev/null || true)"
+bagents="$(jq -r '[.agents[]?.name] | join(", ")' "$X/data/.hermes/hermes.json" 2>/dev/null || true)"
 step "Ready to restore"
 say "  Backup:  ${B}$LABEL${N}${bowner:+ (owner: $bowner; agents: $bagents)}"
 say "  In it:   $(cd "$X" && for p in data/.hermes data/workspace data/tools; do [ -d "$p" ] && printf '/%s  ' "$p"; done)"
@@ -176,7 +176,7 @@ ok "Shared memory back"
 
 # 7. things that belong to this server, not to the backup
 dns="$(tailscale status --json 2>/dev/null | jq -r '.Self.DNSName // empty' | sed 's/\.$//')"
-[ -n "$dns" ] && [ -s "$CREW_JSON" ] && cj_set '.dashboard_url' "$(jstr "https://$dns:8444/")"
+[ -n "$dns" ] && [ -s "$HERMES_SETUP_JSON" ] && cj_set '.dashboard_url' "$(jstr "https://$dns:8444/")"
 if [ "$(cj .features.backup)" = true ] && ! systemctl is-enabled --quiet hermes-backup.timer 2>/dev/null; then
   cj_set '.features.backup' false; BK_HINT=1
 fi

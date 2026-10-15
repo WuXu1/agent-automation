@@ -1,5 +1,5 @@
 """The Integrations Hub: every outside service the agents sign in to, whether it still works, and the balances of the
-paid ones. Optional add-ons (Gmail, Moodle, iCloud, voice replies, backups) show as "off" until crew.json switches them on.
+paid ones. Optional add-ons (Gmail, Moodle, iCloud, voice replies, backups) show as "off" until hermes.json switches them on.
 
 Two halves:
 - local facts the bridge reads itself (files' ages, the Moodle keep-alive job's last result, the backup unit's result);
@@ -20,7 +20,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-import crew
+import team
 import registry
 from actions import Env, _read
 
@@ -67,7 +67,7 @@ def _mtime(path: Path) -> int | None:
 # -- the network checks (jobs runner) ----------------------------------------------------------------------------------------
 
 def check_gmail(env: Env) -> dict:
-    if not crew.feature(env.hermes_home, "gmail"):
+    if not team.feature(env.hermes_home, "gmail"):
         return {"ok": None, "error": "add-on not switched on"}
     vals = _env_file(secrets_dir(env) / "gmail.env")
     if not vals.get("GMAIL_ADDRESS") or not vals.get("GMAIL_APP_PASSWORD"):
@@ -84,7 +84,7 @@ def check_gmail(env: Env) -> dict:
 
 
 def check_icloud(env: Env) -> dict:
-    if not crew.feature(env.hermes_home, "icloud"):
+    if not team.feature(env.hermes_home, "icloud"):
         return {"ok": None, "error": "add-on not switched on"}
     vals = {**_env_file(Path(env.hermes_home) / ".env"), **_env_file(secrets_dir(env) / "icloud.env")}
     user, pw = vals.get("ICLOUD_APPLE_ID"), vals.get("ICLOUD_APP_PASSWORD")
@@ -127,7 +127,7 @@ def check_telegram(env: Env) -> dict:
         if not token or token in seen:
             continue
         seen.add(token)
-        name = crew.name_of(env.hermes_home, "default" if where == "shared .env" else where.split()[0])
+        name = team.name_of(env.hermes_home, "default" if where == "shared .env" else where.split()[0])
         try:
             code, body = _get(f"https://api.telegram.org/bot{token}/getMe")
         except (urllib.error.URLError, OSError) as exc:
@@ -196,7 +196,7 @@ def _builtin(env: Env, c: dict, cron_jobs: list[dict], backup: dict, now: int) -
     i = c.get("icloud") or {}
     out["icloud"] = {"status": _status(i.get("ok")) if i else "unknown",
                      "facts": [i.get("error") or ("signed in" if i.get("ok") else "not checked yet"),
-                               f"{crew.name_of(env.hermes_home, 'tutor')} reads, {crew.name_of(env.hermes_home, 'assistant')} writes"]}
+                               f"{team.name_of(env.hermes_home, 'tutor')} reads, {team.name_of(env.hermes_home, 'assistant')} writes"]}
 
     ok = backup.get("result") == "success" if backup.get("result") else None
     late = bool(backup.get("lastRunAt") and now - backup["lastRunAt"] > 30 * 3_600_000)
@@ -240,14 +240,14 @@ def hub(env: Env, cron_jobs: list[dict], backup: dict, now_ms: int | None = None
     now = now_ms or int(time.time() * 1000)
     c = cached(env) or {}
     built = _builtin(env, c, cron_jobs, backup, now)
-    team = crew.load(env.hermes_home)
-    to_agent = crew.profile_agent(team)
+    setup = team.load(env.hermes_home)
+    to_agent = team.profile_agent(setup)
 
     def _agent(profile: str) -> str:
         return to_agent.get(profile, profile)
 
     def _name(profile: str) -> str:
-        return crew.name_of(env.hermes_home, profile)
+        return team.name_of(env.hermes_home, profile)
 
     by_server = {s["name"].lower(): s for s in servers}           # Hermes keeps the case it was typed in
     cards, claimed = [], set()
@@ -260,7 +260,7 @@ def hub(env: Env, cron_jobs: list[dict], backup: dict, now_ms: int | None = None
         stored = sorted({w for k in item.get("keys") or [] for w in keys.get(k, [])})
         mine = [by_server[m.lower()] for m in item.get("mcp") or [] if m.lower() in by_server]
         check = item.get("check", "none")
-        if addon and not team["features"].get(addon):
+        if addon and not setup["features"].get(addon):
             card["status"] = "off"
             card["facts"] = ["optional add-on, not switched on", item.get("enable") or "switch it on with the kit's add-on command"]
         elif item.get("inUse") is False:

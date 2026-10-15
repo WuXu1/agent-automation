@@ -1,9 +1,9 @@
 import type { AgentId, Board, Card, CardStatus } from '../types'
 import { rng } from '@/lib/rng'
-import { DEMO_CREW } from '../crew'
+import { DEMO_TEAM } from '../team'
 
-// Invented cards in the board's real shape, for the demo crew. Titles are the kind of work the team does, not real tasks.
-const CHIEF = DEMO_CREW.chief
+// Invented cards in the board's real shape, for the demo team. Titles are the kind of work the team does, not real tasks.
+const CHIEF = DEMO_TEAM.chief
 const SEED: Array<[string, AgentId, CardStatus, number, AgentId?]> = [
   ['Draft this week’s study plan around the two lab deadlines', 'sage', 'running', 9],
   ['Find the open-access version of the statistics reading', 'sage', 'todo', 5],

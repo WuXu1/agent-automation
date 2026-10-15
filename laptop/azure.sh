@@ -107,10 +107,10 @@ command -v tailscale >/dev/null || curl -fsSL https://tailscale.com/install.sh |
 systemctl enable --now tailscaled >/dev/null 2>&1
 ip=$(tailscale ip -4 2>/dev/null | head -n1 || true)
 if [ -n "$ip" ]; then echo "TS_IP=$ip"; exit 0; fi
-systemctl stop crew-ts-up 2>/dev/null || true; systemctl reset-failed crew-ts-up 2>/dev/null || true
-systemd-run --unit=crew-ts-up --collect tailscale up --hostname='"$(get AZ_VM)"' >/dev/null
+systemctl stop hermes-ts-up 2>/dev/null || true; systemctl reset-failed hermes-ts-up 2>/dev/null || true
+systemd-run --unit=hermes-ts-up --collect tailscale up --hostname='"$(get AZ_VM)"' >/dev/null
 for i in $(seq 1 40); do
-  url=$(journalctl -u crew-ts-up --no-pager 2>/dev/null | grep -oE "https://login.tailscale.com/[A-Za-z0-9/._-]+" | tail -n1)
+  url=$(journalctl -u hermes-ts-up --no-pager 2>/dev/null | grep -oE "https://login.tailscale.com/[A-Za-z0-9/._-]+" | tail -n1)
   [ -n "$url" ] && { echo "TS_URL=$url"; exit 0; }
   ip=$(tailscale ip -4 2>/dev/null | head -n1 || true); [ -n "$ip" ] && { echo "TS_IP=$ip"; exit 0; }
   sleep 1

@@ -11,6 +11,6 @@ command -v shellcheck >/dev/null && { shellcheck -S error install.sh hermes lapt
 python3 -c "import yaml" 2>/dev/null || { echo "(installing PyYAML for the tests)"; python3 -m pip install -q pyyaml; }
 python3 -B -m unittest discover -s tests || fail=1
 python3 -B -m unittest discover -s vm/tools/weather || fail=1
-python3 -B -m unittest discover -s vm/plugins/crew-voice/tests || fail=1
+python3 -B -m unittest discover -s vm/plugins/hermes-voice/tests || fail=1
 python3 -B -m unittest discover -s dashboard/bridge/tests || fail=1
 [ $fail = 0 ] && echo "ALL CHECKS PASSED" || { echo "SOME CHECKS FAILED"; exit 1; }

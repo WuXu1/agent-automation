@@ -37,7 +37,7 @@ def load(path: Path | None = None) -> dict[str, Any]:
 
 def page_view(reg: dict, team: dict | None = None) -> dict:
     """What the page needs to label things (the Tools grid, roles, services). The registry names agents by profile; with
-    `team` (crew.load) they become the crew's agent ids, and each crew agent's title is its role."""
+    `team` (team.load) they become the team's agent ids, and each team agent's title is its role."""
     to_agent: dict[str, str] = {}
     roles: dict[str, str] = {}
     if team:

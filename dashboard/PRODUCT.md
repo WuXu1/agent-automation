@@ -13,7 +13,7 @@ prebuilt static bundle by a small standard-library Python bridge on the VM (`bri
 
 ## Users
 
-One person who runs a Hermes crew (a chief of staff and three specialists) on one small VM. They open it on a laptop or a
+One person who runs a Hermes team (a chief of staff and three specialists) on one small VM. They open it on a laptop or a
 phone, over their own Tailscale network, to check that everything is healthy, what the agents remember, how long the
 credit lasts and what the agents are working on. Many are new to AI agents: plain words, money impact stated.
 
@@ -24,7 +24,7 @@ task board and the optional add-ons. Success: the owner finds any state in secon
 
 ## Positioning
 
-It shows the owner's own live system, not a generic AI console. Every name comes from `crew.json`; demo mode (made-up data
+It shows the owner's own live system, not a generic AI console. Every name comes from `hermes.json`; demo mode (made-up data
 for an owner called Sam) shows everything working before the bridge is installed.
 
 ## Operating Context

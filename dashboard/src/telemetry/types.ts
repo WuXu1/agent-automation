@@ -1,7 +1,7 @@
 // The data contract between the page and the bridge (`bridge/` serves exactly these shapes under /api).
 // Demo mode produces the same shapes, so every view renders the same way in both modes.
 
-/** The crew's ids from crew.json (e.g. 'atlas'); an agent added later is known by its profile id. */
+/** The team's ids from hermes.json (e.g. 'atlas'); an agent added later is known by its profile id. */
 export type AgentId = string
 
 export interface Agent {
@@ -58,7 +58,7 @@ export interface AgentState {
   name: string
   /** What the chief reads when deciding who gets a card (profile.yaml `description`). */
   description: string
-  /** One of the crew from crew.json. */
+  /** One of the team from hermes.json. */
   core: boolean
   /** Its lead (an agent id); null for the chief, who reports to the owner. */
   reportsTo: AgentId | null
@@ -86,7 +86,7 @@ export interface AgentRun {
 }
 
 /** Something moving between agents on the board: the chief hands a card down, a worker asks a question or finishes.
- * 'owner' is the person the crew works for. */
+ * 'owner' is the person the team works for. */
 export interface Handoff {
   at: number
   from: AgentId | 'owner' | 'helper'

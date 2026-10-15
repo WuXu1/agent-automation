@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { isAgentId, useRoster } from '@/telemetry/agents'
 import type { MemoryGraph } from '@/telemetry/graph'
 import { useBrain } from '@/telemetry/hooks/useMem0Graph'
-import { useCrew } from '@/telemetry/crew'
+import { useTeam } from '@/telemetry/team'
 import type { AgentId } from '@/telemetry/types'
 
 /** The chief watches from the zenith; everyone else sits evenly on a halo above and outside the themes, however many there
@@ -107,7 +107,7 @@ function useArcs(graph: MemoryGraph, where: Map<AgentId, THREE.Vector3>) {
 
 export function Agents({ graph, labels }: { graph: MemoryGraph; labels: boolean }) {
   const roster = useRoster((s) => s.list)
-  const chief = useCrew((s) => s.crew.chief)
+  const chief = useTeam((s) => s.team.chief)
   const where = useMemo(() => stations(roster.map((a) => a.id), chief), [roster, chief])
   const arcs = useArcs(graph, where)
   const halo = useRef<THREE.Group>(null)

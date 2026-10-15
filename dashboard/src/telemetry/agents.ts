@@ -1,14 +1,14 @@
 import { create } from 'zustand'
-import { crewNow, useCrew, type Crew } from './crew'
+import { teamNow, useTeam, type Team } from './team'
 import type { Agent, AgentId, AgentState } from './types'
 
-// The crew from crew.json (telemetry/crew.ts) is the starting roster; live mode adds any other profile found on the VM.
-function fromCrew(crew: Crew): Agent[] {
-  return crew.agents.map((a) => ({ id: a.id, name: a.name, profile: a.profile, role: a.title }))
+// The team from hermes.json (telemetry/team.ts) is the starting roster; live mode adds any other profile found on the VM.
+function fromTeam(team: Team): Agent[] {
+  return team.agents.map((a) => ({ id: a.id, name: a.name, profile: a.profile, role: a.title }))
 }
 
-/** The crew's agents right now (chief first). */
-export const coreAgents = (): Agent[] => fromCrew(crewNow())
+/** The team's agents right now (chief first). */
+export const coreAgents = (): Agent[] => fromTeam(teamNow())
 
 /** A short role from a profile description: "Rocky: training and swimming…" -> "Training and swimming". */
 export function roleFrom(description: string, fallback = 'Specialist'): string {
@@ -35,15 +35,15 @@ export const useRoster = create<Roster>((set) => ({
   reset: () => set({ list: coreAgents() }),
 }))
 
-// a new crew (demo <-> live, or crew.json changed): the roster follows until the agent feed brings the VM's list
-useCrew.subscribe((s, prev) => { if (s.crew !== prev.crew) useRoster.getState().reset() })
+// a new team (demo <-> live, or hermes.json changed): the roster follows until the agent feed brings the VM's list
+useTeam.subscribe((s, prev) => { if (s.team !== prev.team) useRoster.getState().reset() })
 
 export function findAgent(id: AgentId | null | undefined): Agent | undefined {
   return id ? useRoster.getState().list.find((a) => a.id === id) : undefined
 }
 
 export function agentName(id: AgentId): string {
-  if (id === 'owner') return crewNow().owner.name
+  if (id === 'owner') return teamNow().owner.name
   return findAgent(id)?.name ?? id.charAt(0).toUpperCase() + id.slice(1)
 }
 

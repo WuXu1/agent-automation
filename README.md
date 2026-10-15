@@ -64,6 +64,7 @@ Talk to your agents on Telegram. Send a voice note and they understand it; typin
 | Command | What it does |
 |---|---|
 | `./hermes status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
+| `sudo hermes-update` (on the server) | Gets the latest kit straight from GitHub and applies it: no laptop folder needed |
 | `./hermes dashboard` | Opens Command Center (Tailscale must be on) |
 | `./hermes update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
 | `./hermes restart` | Restarts the agents (it waits until they're idle) |
@@ -103,7 +104,7 @@ Don't "Stop" the server in the Azure portal to save credit: student subscription
 | Piece | |
 |---|---|
 | Hermes Agent v0.21.5 | Pinned to one tested release, plus three small fixes in `vm/hermes-patches/`. It never updates itself; see [docs/UPDATING.md](docs/UPDATING.md) |
-| Your four agents | One process (`hermes-gateway`) runs all four, as an unprivileged user `hermes`. Settings come from `vm/crewlib.py`; personalities from `vm/agents/souls/` (yours to edit afterwards: `/data/.hermes/SOUL.md` and `profiles/*/SOUL.md`) |
+| Your four agents | One process (`hermes-gateway`) runs all four, as an unprivileged user `hermes`. Settings come from `vm/hermeslib.py`; personalities from `vm/agents/souls/` (yours to edit afterwards: `/data/.hermes/SOUL.md` and `profiles/*/SOUL.md`) |
 | Memory | [Mem0](https://github.com/mem0ai/mem0) with Postgres on the server; searching runs locally, so your notes aren't sent anywhere to be searched |
 | Dashboard | Command Center, only on your Tailscale network, only for your account |
 | Security | No public ports at all. Keys are typed at hidden prompts and stored only on the server (mode 600). Security updates install themselves |

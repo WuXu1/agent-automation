@@ -1,7 +1,7 @@
 import { Loader2, Send, X } from 'lucide-react'
 import { play } from '@/lib/sound'
 import { useMode } from '@/telemetry/mode'
-import { useChief } from '@/telemetry/crew'
+import { useChief } from '@/telemetry/team'
 import { AgentBadge } from '@/ui/AgentBadge'
 import { Button, IconButton } from '@/ui/Button'
 import { ConfirmButton } from '@/ui/ConfirmButton'

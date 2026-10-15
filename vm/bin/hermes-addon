@@ -10,8 +10,8 @@ set -euo pipefail
 what="${1:-}"; off="${2:-}"
 
 apply() {  # write the settings for the new feature flags, then a quiet restart
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" configs >/dev/null
-  as_hermes "$HPY" -I "$KIT/vm/crewlib.py" skills >/dev/null
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" configs >/dev/null
+  as_hermes "$HPY" -I "$KIT/vm/hermeslib.py" skills >/dev/null
   /usr/local/bin/hermes-restart || warn "Agents busy; it takes effect at the next: sudo hermes-restart"
 }
 

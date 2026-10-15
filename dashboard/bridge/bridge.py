@@ -6,7 +6,7 @@ tailnet-only by `tailscale serve --https=8444`. See README.md in this folder.
 Rules it keeps:
 - Every request needs the `Tailscale-User-Login` header that `tailscale serve` adds, and the login must be on the allow list.
 - Writes also need `X-Hermes-Dash: 1` and a JSON body (a plain cross-site form cannot send either).
-- Mem0: list, search, add, update and delete notes of one user only (crew.json's owner.id). Never /reset, /configure or a delete-all.
+- Mem0: list, search, add, update and delete notes of one user only (hermes.json's owner.id). Never /reset, /configure or a delete-all.
 - No key ever leaves the VM: the Mem0 key is read from the server's env file and only sent to 127.0.0.1:8888.
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ import actions  # noqa: E402
 import feeds  # noqa: E402
 import automations  # noqa: E402
 import brain  # noqa: E402
-import crew  # noqa: E402
+import team  # noqa: E402
 import inbox  # noqa: E402
 import integrations  # noqa: E402
 import registry  # noqa: E402
@@ -229,10 +229,10 @@ class App:
     def _api(self, method: str, route: str, headers: dict[str, str], body: bytes, query: str = "") -> Response:
         if route == "/health" and method == "GET":
             return self._json(200, {"ok": True, "version": VERSION})
-        if route == "/crew" and method == "GET":
-            # names, titles and switched-on add-ons for the page (crew.py); a renamed agent shows its new name
+        if route == "/team" and method == "GET":
+            # names, titles and switched-on add-ons for the page (team.py); a renamed agent shows its new name
             home = self.paths.hermes_home
-            return self._json(200, crew.public(home, lambda p: actions.profile_meta(actions.Env(hermes_home=home), p).get("display_name")))
+            return self._json(200, team.public(home, lambda p: actions.profile_meta(actions.Env(hermes_home=home), p).get("display_name")))
         if method in ("POST", "PUT", "DELETE"):
             if headers.get("x-hermes-dash") != "1":
                 return self._error(403, "Writes come only from the dashboard page")
@@ -242,7 +242,7 @@ class App:
         m = re.fullmatch(r"/agents/([a-z][a-z0-9]{0,23})/terminal", route)
         if m and method == "GET":
             # Agent Studio's terminal window: the agent's own session database, read only (terminal.py)
-            profile = crew.profile_of(self.paths.hermes_home, m.group(1))
+            profile = team.profile_of(self.paths.hermes_home, m.group(1))
             if profile not in feeds.known_profiles(self.paths.hermes_home):
                 return self._error(404, "No such agent")
             q = urllib.parse.parse_qs(query)
@@ -344,7 +344,7 @@ class App:
             return self._error(400, "Send JSON")
         m = re.fullmatch(r"/agents/([a-z][a-z0-9]{0,23})", route)
         if m:
-            profile = crew.profile_of(env.hermes_home, m.group(1))
+            profile = team.profile_of(env.hermes_home, m.group(1))
             if method == "GET":
                 return self._json(200, actions.agent_detail(env, profile))
             if method == "PUT":
@@ -385,7 +385,7 @@ class App:
             return self._json(202, jobs.submit(env, "enhance", args))
         m = re.fullmatch(r"/agents/([a-z][a-z0-9]{0,23})/skills(?:/(search|inspect|install)|/([a-z0-9][a-z0-9_-]{1,47}))?", route)
         if m:
-            profile, verb, name = crew.profile_of(env.hermes_home, m.group(1)), m.group(2), m.group(3)
+            profile, verb, name = team.profile_of(env.hermes_home, m.group(1)), m.group(2), m.group(3)
             if verb and method == "POST":
                 return self._json(202, jobs.submit(env, f"skill-{verb}", {**args, "profile": profile}))
             if name and method == "PUT":
@@ -408,7 +408,7 @@ class App:
             return self._json(200, {"entries": [{k: v for k, v in e.items() if k != "config"} for e in tools.catalog(env)]})
         m = re.fullmatch(r"/mcp/([a-z][a-z0-9_-]{1,39})/([a-z][a-z0-9]{0,23})", route)
         if m and method == "DELETE":
-            return self._json(200, tools.remove_server(env, crew.profile_of(env.hermes_home, m.group(2)), m.group(1)))
+            return self._json(200, tools.remove_server(env, team.profile_of(env.hermes_home, m.group(2)), m.group(1)))
         if route in ("/integrations", "/integrations/refresh") and method in ("GET", "POST"):
             job = self._single("integrations") if route.endswith("refresh") or integrations.stale(env) else None
             reg = self.registry()
@@ -420,7 +420,7 @@ class App:
                                    servers=servers, keys=registry.key_names(env), catalog=tools.catalog(env),
                                    units=feeds.unit_states(sorted({i["service"] for i in reg["integrations"] if i.get("service")})))
             return self._json(200, {**hub, "job": job})
-        if route.startswith("/inbox") and not crew.feature(env.hermes_home, "gmail"):
+        if route.startswith("/inbox") and not team.feature(env.hermes_home, "gmail"):
             return self._error(404, "The Gmail add-on is not switched on")
         if route in ("/inbox", "/inbox/refresh") and method in ("GET", "POST"):
             job = self._single("inbox-list") if route.endswith("refresh") or inbox.list_stale(env) else None
@@ -498,7 +498,7 @@ class App:
             return self._json(202, jobs.submit(env, "memory-tidy", args))
         if route == "/registry" and method == "GET":
             reg = self.registry()
-            view = registry.page_view(reg, crew.load(env.hermes_home))
+            view = registry.page_view(reg, team.load(env.hermes_home))
             view["services"] = {r["unit"]: {"label": r["label"], "port": r["port"], "described": r["described"]}
                                 for r in registry.service_list(reg, self.systemd_dir)}
             return self._json(200, view)
@@ -511,7 +511,7 @@ class App:
                 return self._json(200, automations.create(env, args))
         m = re.fullmatch(r"/automations/([a-z][a-z0-9]{0,23})/([a-f0-9]{8,32})(?:/(pause|resume|run))?", route)
         if m:
-            profile, job, verb = crew.profile_of(env.hermes_home, m.group(1)), m.group(2), m.group(3)
+            profile, job, verb = team.profile_of(env.hermes_home, m.group(1)), m.group(2), m.group(3)
             if verb and method == "POST":
                 return self._json(200, automations.act(env, profile, job, verb))
             if not verb and method == "PUT":
@@ -520,7 +520,7 @@ class App:
                 return self._json(200, automations.remove(env, profile, job))
             return self._error(405, "Not here")
         if route == "/backup":
-            if not crew.feature(env.hermes_home, "backup"):
+            if not team.feature(env.hermes_home, "backup"):
                 return self._error(404, "The backup add-on is not switched on")
             shown = (feeds.parse_show(feeds._systemctl("show", "hermes-backup.service", "-p", "ActiveState,Result")) or [{}])[0]
             if method == "GET":
@@ -631,8 +631,8 @@ def main(argv: list[str] | None = None, serve: Callable[[http.server.HTTPServer]
         paths.credit = cfg["credit"]
     env = actions.Env(hermes_home=paths.hermes_home, gateway_url=paths.gateway_url,
                       **{k: v for k, v in cfg.get("actions", {}).items() if k in actions.Env.__dataclass_fields__})
-    # the Mem0 user: config.json's (written from crew.json at install), else crew.json's owner.id now
-    user = cfg.get("mem0_user") or crew.load(paths.hermes_home)["owner"]["id"]
+    # the Mem0 user: config.json's (written from hermes.json at install), else hermes.json's owner.id now
+    user = cfg.get("mem0_user") or team.load(paths.hermes_home)["owner"]["id"]
     app = App(Mem0(cfg.get("mem0_url", "http://127.0.0.1:8888"), key, user),
               Path(cfg.get("static_dir", "/data/tools/hermes-dash/dist")), list(cfg.get("allowed_logins", [])), paths, env)
     if not app.allowed:

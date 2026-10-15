@@ -10,7 +10,7 @@ MEM0_ENV=$MEM0_STATE/server.env
 
 stage_memory() {
   step "Shared memory (Mem0, on this server)"
-  cat > /etc/postgresql/16/main/conf.d/crew-small.conf <<'CONF'
+  cat > /etc/postgresql/16/main/conf.d/hermes-small.conf <<'CONF'
 # small footprint for the 4 GB server (memory holds a few thousand short facts)
 shared_buffers = 64MB
 max_connections = 30
@@ -19,7 +19,7 @@ maintenance_work_mem = 32MB
 effective_cache_size = 256MB
 listen_addresses = 'localhost'
 CONF
-  chmod 644 /etc/postgresql/16/main/conf.d/crew-small.conf
+  chmod 644 /etc/postgresql/16/main/conf.d/hermes-small.conf
   systemctl enable --quiet postgresql
   systemctl restart postgresql@16-main
 
@@ -68,7 +68,7 @@ SQL
 
   # What is worth remembering: lasting facts only, never keys or phone numbers (Mem0's 'custom_instructions').
   local rule key
-  rule="$(as_hermes "$HPY" -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import crewlib; print(crewlib.render(open(sys.argv[2]).read(), crewlib.load_crew()).strip())' "$KIT/vm" "$KIT/vm/mem0/extraction-rule.md")"
+  rule="$(as_hermes "$HPY" -I -c 'import sys; sys.path.insert(0, sys.argv[1]); import hermeslib; print(hermeslib.render(open(sys.argv[2]).read(), hermeslib.load_setup()).strip())' "$KIT/vm" "$KIT/vm/mem0/extraction-rule.md")"
   key="$(env_get "$MEM0_ENV" ADMIN_API_KEY)"
   jq -n --arg r "$rule" '{custom_instructions: $r}' | curl -s -o /dev/null -m 20 -K <(printf 'header = "X-API-Key: %s"\n' "$key") \
     -H 'Content-Type: application/json' -X POST --data-binary @- http://127.0.0.1:8888/configure || warn "couldn't set the memory rule; it will use Mem0's default"
@@ -79,7 +79,7 @@ SQL
   local owner role prof aid
   owner="$(cj .owner.id)"
   for role in $ROLES; do
-    prof="$(profile_of "$role")"; aid="$(jq -r --arg r "$role" '.agents[] | select(.role==$r) | .id' "$CREW_JSON")"
+    prof="$(profile_of "$role")"; aid="$(jq -r --arg r "$role" '.agents[] | select(.role==$r) | .id' "$HERMES_SETUP_JSON")"
     if [ "$prof" = default ]; then   # printf is a shell builtin: the key never appears on a command line
       printf '{"host": "http://127.0.0.1:8888", "api_key": "%s", "user_id": "%s", "agent_id": "%s"}\n' "$key" "$owner" "$aid" \
         | install -o hermes -g hermes -m 600 /dev/stdin "$HH/mem0.json"

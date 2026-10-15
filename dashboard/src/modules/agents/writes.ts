@@ -8,7 +8,7 @@ import type { AgentDetail, AgentMesh, RestartState } from '@/telemetry/types'
 // Agent writes in one place. Live: the bridge (confirmed, backed up, logged on the VM). Demo: the demo data changes in
 // this tab only, so every control can be tried without a VM.
 
-// The demo crew's SOULs (telemetry/crew.ts DEMO_CREW), keyed by Hermes profile.
+// The demo team's SOULs (telemetry/team.ts DEMO_TEAM), keyed by Hermes profile.
 const DEMO_SOULS: Record<string, string> = {
   default: 'You are Atlas, Sam’s chief of staff. You run the board, brief Sam each morning and speak for the team.',
   tutor: 'You are Sage, Sam’s tutor. You turn course deadlines into study blocks and explain things plainly.',

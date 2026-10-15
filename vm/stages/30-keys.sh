@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # Stage: the keys. Each is typed at a hidden prompt, checked against its service, and written straight into the .env file of the
-# agent(s) that need it (mode 600, owned by hermes). Nothing is printed, logged, or put in crew.json.
+# agent(s) that need it (mode 600, owned by hermes). Nothing is printed, logged, or put in hermes.json.
 
 check_deepseek() { [ "$(curl_status "url = \"https://api.deepseek.com/models\"
 header = \"Authorization: Bearer $1\"")" = 200 ]; }
@@ -38,7 +38,7 @@ stage_keys() {
 
   # Gemini: a free backup brain when DeepSeek is down. Optional but recommended.
   if env_has "$chief_env" GEMINI_API_KEY; then ok "Gemini backup key saved before"; cj_set '.has_gemini' true
-  elif [ -n "${CREW_UNATTENDED:-}" ]; then cj_set '.has_gemini' false
+  elif [ -n "${HERMES_SETUP_UNATTENDED:-}" ]; then cj_set '.has_gemini' false
   else
     say "  ${B}Gemini${N} (Google) is the free backup: if DeepSeek is down, the agents quietly switch to it."
     say "  Make a key at https://aistudio.google.com/apikey (free tier is enough). Press Enter to skip."

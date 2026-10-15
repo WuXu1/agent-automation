@@ -117,7 +117,7 @@ function Preview({ m, onBack }: { m: Message; onBack: () => void }) {
   )
 }
 
-/** Inbox: your mail, read only, when the Gmail add-on is switched on (crew.json `features.gmail`). */
+/** Inbox: your mail, read only, when the Gmail add-on is switched on (hermes.json `features.gmail`). */
 export default function InboxView() {
   const mode = useMode((s) => s.mode)
   const [state, setState] = useState<InboxState | null>(null)

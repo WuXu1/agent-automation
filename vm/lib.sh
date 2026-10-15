@@ -4,9 +4,9 @@
 KIT=/opt/agent-automation
 DATA=/data
 HH=/data/.hermes                         # HERMES_HOME of the chief (the `default` profile)
-CREW_JSON=$HH/crew.json
+HERMES_SETUP_JSON=$HH/hermes.json
 AGENT_SRC=/opt/hermes/hermes-agent
-HPY=$AGENT_SRC/venv/bin/python           # Hermes's Python (has PyYAML), used for vm/crewlib.py
+HPY=$AGENT_SRC/venv/bin/python           # Hermes's Python (has PyYAML), used for vm/hermeslib.py
 STAMP_DIR=/var/lib/agent-automation      # one file per finished install stage
 HERMES_TAG=v2026.9.24                    # Hermes v0.21.5, commit f97608f: the pinned stable release
 HERMES_COMMIT=f97608f178d1ffeca59860195ab7da295f7c8e5f
@@ -26,21 +26,21 @@ warn() { printf '%s  ! %s%s\n' "$Y" "$*" "$N" >&2; }
 die()  { printf '%s  ✗ %s%s\n' "$R" "$*" "$N" >&2; exit 1; }
 note() { printf '%s    %s%s\n' "$DIM" "$*" "$N"; }
 
-ask() {   # ask "Question" "default"   (CREW_UNATTENDED=1: the default, without asking)
+ask() {   # ask "Question" "default"   (HERMES_SETUP_UNATTENDED=1: the default, without asking)
   local q="$1" def="${2:-}" a
-  if [ -n "${CREW_UNATTENDED:-}" ]; then printf '%s' "$def"; return; fi
+  if [ -n "${HERMES_SETUP_UNATTENDED:-}" ]; then printf '%s' "$def"; return; fi
   if [ -n "$def" ]; then printf '%s  ? %s %s[%s]%s ' "$B" "$q" "$DIM" "$def" "$N" >&2; else printf '%s  ? %s%s ' "$B" "$q" "$N" >&2; fi
   IFS= read -r a </dev/tty || a=""
   a="$(printf '%s' "$a" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
   printf '%s' "${a:-$def}"
 }
 confirm() { case "$(ask "$1 (y/n)" "${2:-y}")" in [Yy]*) return 0 ;; *) return 1 ;; esac; }
-pause() { [ -n "${CREW_UNATTENDED:-}" ] && return 0; printf '%s  … %s (press Enter)%s ' "$B" "${1:-Ready?}" "$N" >&2; IFS= read -r _ </dev/tty || true; }
+pause() { [ -n "${HERMES_SETUP_UNATTENDED:-}" ] && return 0; printf '%s  … %s (press Enter)%s ' "$B" "${1:-Ready?}" "$N" >&2; IFS= read -r _ </dev/tty || true; }
 
 # ask_secret "What" -> the value on stdout. Nothing is shown while typing or pasting; the value never goes to a log or argv.
 ask_secret() {
   local v
-  [ -z "${CREW_UNATTENDED:-}" ] || die "A key is missing ($1). Run the full installer to add it: ./install.sh"
+  [ -z "${HERMES_SETUP_UNATTENDED:-}" ] || die "A key is missing ($1). Run the full installer to add it: ./install.sh"
   printf '%s  🔑 %s (hidden; paste, then Enter):%s ' "$B" "$1" "$N" >&2
   IFS= read -rs v </dev/tty || v=""
   printf '\n' >&2
@@ -61,12 +61,12 @@ profile_of() { case "$1" in chief) echo default ;; *) echo "$1" ;; esac; }
 home_of()    { [ "$1" = default ] && echo "$HH" || echo "$HH/profiles/$1"; }
 env_of()     { echo "$(home_of "$(profile_of "$1")")/.env"; }
 
-# crew.json access (jq is installed in the system stage)
-cj()     { jq -r "$1 // empty" "$CREW_JSON" 2>/dev/null; }
+# hermes.json access (jq is installed in the system stage)
+cj()     { jq -r "$1 // empty" "$HERMES_SETUP_JSON" 2>/dev/null; }
 cj_set() {   # cj_set '.owner.name' '"Sam"'   (the second argument is JSON)
   local tmp; tmp="$(mktemp)"
-  [ -s "$CREW_JSON" ] || echo '{"version":1}' > "$CREW_JSON"
-  jq "$1 = $2" "$CREW_JSON" > "$tmp" && install -o hermes -g hermes -m 640 "$tmp" "$CREW_JSON"; rm -f "$tmp"
+  [ -s "$HERMES_SETUP_JSON" ] || echo '{"version":1}' > "$HERMES_SETUP_JSON"
+  jq "$1 = $2" "$HERMES_SETUP_JSON" > "$tmp" && install -o hermes -g hermes -m 640 "$tmp" "$HERMES_SETUP_JSON"; rm -f "$tmp"
 }
 jstr() { jq -Rn --arg v "$1" '$v'; }
 
@@ -74,10 +74,10 @@ jstr() { jq -Rn --arg v "$1" '$v'; }
 env_set() {  # env_set FILE KEY  (value on stdin)
   local f="$1"
   [ -f "$f" ] || { install -o hermes -g hermes -m 600 /dev/null "$f"; }
-  as_hermes /usr/bin/python3 -I "$KIT/vm/crewlib.py" env-set "$f" "$2"
+  as_hermes /usr/bin/python3 -I "$KIT/vm/hermeslib.py" env-set "$f" "$2"
   chown hermes:hermes "$f"; chmod 600 "$f"
 }
-env_has() { [ -f "$1" ] && as_hermes /usr/bin/python3 -I "$KIT/vm/crewlib.py" env-has "$1" "$2"; }
+env_has() { [ -f "$1" ] && as_hermes /usr/bin/python3 -I "$KIT/vm/hermeslib.py" env-has "$1" "$2"; }
 env_get() { [ -f "$1" ] && sed -n "s/^\(export \)\{0,1\}$2=//p" "$1" | tail -n1 | tr -d "\"'"; }
 
 # HTTP status of a request whose secret part is fed through curl's config on stdin (so it never shows in `ps`).

@@ -11,11 +11,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # crewfix
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # hermesfix
 import bridge  # noqa: E402
 import feeds  # noqa: E402
 import terminal  # noqa: E402
-from crewfix import LOGIN, write_crew  # noqa: E402
+from hermesfix import LOGIN, write_setup  # noqa: E402
 
 SCHEMA = """
 CREATE TABLE sessions (id TEXT PRIMARY KEY, source TEXT NOT NULL, title TEXT, model TEXT, started_at REAL NOT NULL, ended_at REAL, end_reason TEXT,
@@ -35,7 +35,7 @@ class TerminalTest(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.home = Path(tmp.name) / "hermes"
         (self.home / "profiles" / "tutor").mkdir(parents=True)
-        write_crew(self.home)
+        write_setup(self.home)
         self.db = self.home / "profiles" / "tutor" / "state.db"
         self.now = time.time()
         con = sqlite3.connect(self.db)
@@ -109,7 +109,7 @@ class TerminalTest(unittest.TestCase):
         self.assertEqual(json.loads(body)["session"]["id"], "old")
         self.assertEqual(app.handle("GET", "/api/agents/nobody/terminal", h, b"")[0], 404)
         self.assertEqual(app.handle("GET", "/api/agents/tutor/terminal?session=../../x", h, b"")[0], 400)
-        status, _, body = app.handle("GET", "/api/agents/sage/terminal", h, b"")           # the crew id works too (sage = tutor)
+        status, _, body = app.handle("GET", "/api/agents/sage/terminal", h, b"")           # the team id works too (sage = tutor)
         self.assertEqual((status, json.loads(body)["profile"]), (200, "tutor"))
         status, _, body = app.handle("GET", "/api/agents/atlas/terminal", h, b"")          # the chief's database does not exist here: empty, not an error
         self.assertEqual((status, json.loads(body)["steps"], json.loads(body)["profile"]), (200, [], "default"))

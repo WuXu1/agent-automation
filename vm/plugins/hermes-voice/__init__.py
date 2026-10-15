@@ -1,4 +1,4 @@
-"""crew-voice: Hermes TTS provider for voice-note replies in each agent's own ElevenLabs voice.
+"""hermes-voice: Hermes TTS provider for voice-note replies in each agent's own ElevenLabs voice.
 
 The gateway hands this provider whatever it wants spoken (an auto voice reply, or a
 text_to_speech call). Long or written-style text is rewritten into one to three spoken sentences
@@ -28,7 +28,7 @@ _VOICES = _HERE / "voices.json"
 SETTINGS = json.loads(_VOICES.read_text()) if _VOICES.exists() else {"default_voice": "", "default_model": "eleven_v4", "owner": "the owner", "personas": {}}
 _STYLE_FILE = _HERE / "STYLE.md"
 STYLE = _STYLE_FILE.read_text() if _STYLE_FILE.exists() else ""
-logger = logging.getLogger("hermes_plugins.crew_voice")
+logger = logging.getLogger("hermes_plugins.hermes_voice")
 
 
 def _hermes_secret(name):
@@ -52,7 +52,7 @@ def _hermes_llm(messages):
     return str(content or "")
 
 
-class CrewVoiceProvider(TTSProvider):
+class HermesVoiceProvider(TTSProvider):
     def __init__(self, llm=None, secret=None, synth=None):
         self._llm = llm or _hermes_llm
         self._secret = secret or _hermes_secret
@@ -60,11 +60,11 @@ class CrewVoiceProvider(TTSProvider):
 
     @property
     def name(self) -> str:
-        return "crew-voice"
+        return "hermes-voice"
 
     @property
     def display_name(self) -> str:
-        return "Crew voice (ElevenLabs v4, spoken rewrite)"
+        return "Hermes voice (ElevenLabs v4, spoken rewrite)"
 
     @property
     def voice_compatible(self) -> bool:
@@ -74,7 +74,7 @@ class CrewVoiceProvider(TTSProvider):
         try:
             return bool(self._secret("ELEVENLABS_API_KEY"))
         except Exception as exc:
-            logger.warning("crew-voice unavailable: could not read the ElevenLabs key (%s)", type(exc).__name__)
+            logger.warning("hermes-voice unavailable: could not read the ElevenLabs key (%s)", type(exc).__name__)
             return False
 
     def synthesize(self, text, output_path, *, voice=None, model=None, speed=None,
@@ -87,7 +87,7 @@ class CrewVoiceProvider(TTSProvider):
             try:
                 return self._llm(messages)
             except Exception as exc:  # spoken_version then falls back to the trimmed reply; say why
-                logger.warning("crew-voice: spoken rewrite failed (%s); using the trimmed reply", type(exc).__name__)
+                logger.warning("hermes-voice: spoken rewrite failed (%s); using the trimmed reply", type(exc).__name__)
                 raise
 
         spoken = jv_speech.spoken_version(text, persona=persona, owner=SETTINGS.get("owner", "the owner"), style=STYLE, llm=llm)
@@ -95,10 +95,10 @@ class CrewVoiceProvider(TTSProvider):
                             api_key=self._secret("ELEVENLABS_API_KEY") or "",
                             output_format=jv_eleven.output_format_for(str(output_path)))
         Path(output_path).write_bytes(audio)
-        logger.info("crew-voice: voice=%s model=%s chars_in=%d chars_out=%d",
+        logger.info("hermes-voice: voice=%s model=%s chars_in=%d chars_out=%d",
                     voice_id, model_id, len(text), len(spoken))
         return str(output_path)
 
 
 def register(ctx):
-    ctx.register_tts_provider(CrewVoiceProvider())
+    ctx.register_tts_provider(HermesVoiceProvider())

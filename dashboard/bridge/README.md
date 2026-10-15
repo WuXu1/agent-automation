@@ -14,21 +14,21 @@ sudo bash <kit>/dashboard/bridge/deploy/install.sh --undo   # stop it, its helpe
 ```
 
 It needs: Hermes installed (user `hermes`, data in `/data/.hermes`), Mem0 (`/data/.hermes/mem0-server/server.env`),
-`/data/.hermes/crew.json`, `python3`, `curl` and a signed-in `tailscale`. It asks no questions. It:
+`/data/.hermes/hermes.json`, `python3`, `curl` and a signed-in `tailscale`. It asks no questions. It:
 
 1. checks every bridge file parses, then copies them to `/data/tools/hermes-dash/` and the page to `.../dist/`;
 2. installs the root-owned helpers (`restart-gateway.sh`, `restart_when_quiet.sh`, `backup-now.sh`) in
    `/usr/local/lib/hermes-dash/` and the units `hermes-dash` and `hermes-dash-{restart,jobs,backup}.{path,service}`;
-3. on the first install writes `/data/.hermes/hermes-dash/config.json` (mode 600): `mem0_user` is crew.json's `owner.id`,
-   `allowed_logins` is crew.json's `owner.tailscale_login`, or else the Tailscale login that owns the VM;
+3. on the first install writes `/data/.hermes/hermes-dash/config.json` (mode 600): `mem0_user` is hermes.json's `owner.id`,
+   `allowed_logins` is hermes.json's `owner.tailscale_login`, or else the Tailscale login that owns the VM;
 4. starts the bridge, checks `/api/health`, Mem0 and the feeds through it, then runs
    `tailscale serve --bg --https=8444 http://127.0.0.1:8890` (never Funnel; other serve entries stay as they are).
 
 It restarts nothing but its own service.
 
-## crew.json
+## hermes.json
 
-The bridge reads `/data/.hermes/crew.json` (`crew.py`) whenever the file changes on disk, so an add-on switched on later
+The bridge reads `/data/.hermes/hermes.json` (`team.py`) whenever the file changes on disk, so an add-on switched on later
 shows without a restart. Fields it uses:
 
 | Field | Used for |
@@ -43,7 +43,7 @@ shows without a restart. Fields it uses:
 A renamed agent (Agent Studio writes `display_name` in its `profile.yaml`) shows its new name. A missing or broken file
 falls back to plain names (Chief, Tutor, Assistant, Coach) and no add-ons.
 
-`GET /api/crew` returns `{owner: {name, pronouns}, timezone, chief, agents: [{id, profile, role, name, title}], features}`.
+`GET /api/team` returns `{owner: {name, pronouns}, timezone, chief, agents: [{id, profile, role, name, title}], features}`.
 It never returns the login or the Mem0 id.
 
 ## Routes
@@ -53,7 +53,7 @@ Reads:
 | Route | Does |
 |---|---|
 | `GET /`, `/assets/*` | the page (`dist/`); any unknown path gets the page, never a file outside `dist/` |
-| `GET /api/health`, `GET /api/crew` | `{ok, version}`; the crew (above) |
+| `GET /api/health`, `GET /api/team` | `{ok, version}`; the team (above) |
 | `GET /api/memories`, `POST /api/memories/search` | every note of the owner's Mem0 user; vector search, filtered to that user |
 | `GET /api/agents` | per agent: model, MCP servers, board load, last activity, its last runs and 30-day reliability; gateway health; recent hand-offs; `talks` (open cards between two agents right now) |
 | `GET /api/agents/{id}/terminal` | one agent's runs from its own `state.db` (opened read only) as terminal lines; keys, tokens, passwords and phone numbers blanked |
@@ -100,7 +100,7 @@ Python with the intended values checked, then swapped in; a failed check changes
 
 Agents, skills, MCP servers, cron jobs and the board are read live. What the VM cannot tell (a friendly name, who uses it,
 where its secret lives, a port) is in `registry.json`: integrations, built-in tools, MCP rules, teams, services and timers.
-It names agents by Hermes profile; the bridge turns them into crew ids. An integration with a `feature` is an optional
+It names agents by Hermes profile; the bridge turns them into team ids. An integration with a `feature` is an optional
 add-on. Anything installed on the VM that the registry does not describe still shows up, marked **new**. When you add
 something, describe it there and run the installer again.
 
@@ -124,4 +124,4 @@ cd dashboard && python3 -B -m unittest discover -s bridge/tests
 ```
 
 No network and no VM: a fake Mem0, a fake `hermes` CLI and gateway, a fake IMAP server, fixture SQLite files and canned
-`systemctl` output, with a made-up crew in `tests/crewfix.py`.
+`systemctl` output, with a made-up team in `tests/hermesfix.py`.

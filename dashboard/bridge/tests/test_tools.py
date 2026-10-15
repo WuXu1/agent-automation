@@ -114,7 +114,7 @@ class ToolsTest(fixture.ActionsTest):
         self.assertEqual(jobs.do_enhance(self.env, a, llm)["text"], "Nora: research and reading.")
         self.assertIn("Agent: Nora.", seen["user"])
         self.assertEqual(seen["tokens"], 300)
-        self.assertIn("Sam's personal assistant team", seen["system"])                 # the owner's name from crew.json
+        self.assertIn("Sam's personal assistant team", seen["system"])                 # the owner's name from hermes.json
         self.assertIn("Sam's draft:", seen["user"])
         with self.assertRaises(actions.ActionError):
             jobs.submit(self.env, "transcript", {"conversation_id": "conv_abc123", "call_id": 7})   # no phone line in the kit
@@ -135,7 +135,7 @@ class ToolsTest(fixture.ActionsTest):
         self.assertNotIn("s3cret", (Path(self.env.state_dir) / "actions.log").read_text())
         row = next(r for r in out["servers"] if r["name"] == "weather")
         self.assertEqual((row["agents"], row["transport"], row["auth"]), ({"coach": True}, "http", "headers"))
-        # copy onto the chief (by crew id): the secret value goes across on the VM
+        # copy onto the chief (by team id): the secret value goes across on the VM
         out = tools.add_server(self.env, {"source": "copy", "name": "weather", "from": "coach", "profiles": ["atlas", "coach"]})
         self.assertEqual((out["added"], out["skipped"]), (["default"], ["coach"]))
         self.assertIn("MCP_WEATHER_AUTHORIZATION=Bearer s3cret", (self.home / ".env").read_text())

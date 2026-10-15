@@ -32,8 +32,8 @@ stage_system() {
   install -d -o hermes -g hermes -m 755 /opt/hermes
   local bashrc=/home/hermes/.bashrc
   grep -q 'HERMES_HOME=/data/.hermes' "$bashrc" 2>/dev/null || {
-    printf '# agent-automation: the hermes command and its home (also for non-login ssh commands)\nexport PATH="$HOME/.local/bin:$PATH"\nexport HERMES_HOME=/data/.hermes\n\n' | cat - "$bashrc" > /tmp/crew-bashrc
-    install -o hermes -g hermes -m 644 /tmp/crew-bashrc "$bashrc"; rm -f /tmp/crew-bashrc
+    printf '# agent-automation: the hermes command and its home (also for non-login ssh commands)\nexport PATH="$HOME/.local/bin:$PATH"\nexport HERMES_HOME=/data/.hermes\n\n' | cat - "$bashrc" > /tmp/hermes-bashrc
+    install -o hermes -g hermes -m 644 /tmp/hermes-bashrc "$bashrc"; rm -f /tmp/hermes-bashrc
   }
   install -m 755 "$KIT/vm/bin/"hermes-* /usr/local/bin/
   ok "Folders ready: /data (agents' data), /opt/hermes (their program)"

@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import brain
-import crew
+import team
 from actions import ActionError, Env, _lock, log_action
 
 WEEK = 7 * 86_400
@@ -107,7 +107,7 @@ def job_args(env: Env, memories: list[dict], now: float | None = None) -> dict:
         counts[n["section"]] = counts.get(n["section"], 0) + 1
     return {"notes": notes, "sections": [{"id": s["id"], "label": s["label"], "blurb": s.get("blurb", ""), "notes": counts.get(s["id"], 0)}
                                          for s in b["sections"]],
-            "today": time.strftime("%A %d %B %Y", time.localtime(now or time.time())), "owner": crew.owner_name(env.hermes_home)}
+            "today": time.strftime("%A %d %B %Y", time.localtime(now or time.time())), "owner": team.owner_name(env.hermes_home)}
 
 
 def check_args(args: dict) -> dict:

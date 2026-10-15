@@ -2,7 +2,7 @@ import { advanceSharedBoard, sharedBoard } from '../demo/board'
 import { demoMesh, tickMesh } from '../demo/agents'
 import { demoInfra, tickInfra } from '../demo/infra'
 import { useRoster } from '../agents'
-import { useCrew } from '../crew'
+import { useTeam } from '../team'
 import { makeFeed, useFeed } from '../feed'
 import type { AgentMesh, Board, Infra } from '../types'
 
@@ -19,8 +19,8 @@ export const useBoard = () => useFeed(boardFeed)
 agentFeed.subscribe((s, prev) => {
   if (s.data && s.data !== prev.data) useRoster.getState().fromMesh(s.data.agents)
 })
-// a new crew resets the roster to it (agents.ts); put back what the VM reported, if we have it
-useCrew.subscribe((s, prev) => {
+// a new team resets the roster to it (agents.ts); put back what the VM reported, if we have it
+useTeam.subscribe((s, prev) => {
   const d = agentFeed.getState().data
-  if (s.crew !== prev.crew && d) useRoster.getState().fromMesh(d.agents)
+  if (s.team !== prev.team && d) useRoster.getState().fromMesh(d.agents)
 })

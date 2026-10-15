@@ -1,5 +1,5 @@
 import { Pause, Pencil, Play, Plus, Server, Trash2, Zap } from 'lucide-react'
-import { chiefId } from '@/telemetry/crew'
+import { chiefId } from '@/telemetry/team'
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { play } from '@/lib/sound'

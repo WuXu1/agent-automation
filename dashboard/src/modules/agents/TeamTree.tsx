@@ -6,7 +6,7 @@ import { ago } from '@/lib/time'
 import { useNow } from '@/lib/useNow'
 import { useReducedMotion } from '@/lib/useReducedMotion'
 import { agentName, coreAgents, roleFrom } from '@/telemetry/agents'
-import { useCrew } from '@/telemetry/crew'
+import { useTeam } from '@/telemetry/team'
 import type { AgentMesh, AgentRun, AgentState, Handoff, Talk } from '@/telemetry/types'
 import { AgentBadge } from '@/ui/AgentBadge'
 import { Chip as StatusChip } from '@/ui/Chip'
@@ -20,7 +20,7 @@ import { HELPERS, KIND } from './shared'
  */
 
 /** Team tints: violet shifted in hue, so every line still reads as "agent" (DESIGN.md). */
-const TINT: Record<string, string> = { crew: '#c084fc' }
+const TINT: Record<string, string> = { specialists: '#c084fc' }
 const PALETTE = ['#a78bfa', '#e879f9', '#93c5fd']
 const AMBER = '#f59e0b'
 const INDENT = 34
@@ -47,7 +47,7 @@ function layout(agents: AgentState[], teams: NonNullable<Registry['teams']>, rol
     const lead = a.reportsTo && byId.has(a.reportsTo) && a.reportsTo !== a.id ? a.reportsTo : chief
     kids.set(lead, [...(kids.get(lead) ?? []), a])
   }
-  // the crew first (crew.json's order), then the registry's roles order
+  // the team first (hermes.json's order), then the registry's roles order
   const order = [...coreAgents().map((a) => a.id), ...Object.keys(roles)]
   const rank = (a: AgentState) => { const i = order.indexOf(a.id); return i < 0 ? 999 : i }
   for (const list of kids.values()) list.sort((x, y) => rank(x) - rank(y) || x.name.localeCompare(y.name))
@@ -431,7 +431,7 @@ export function TeamTree({ mesh, pendingFor, onOpen }: {
   const [els] = useState(() => new Map<string, HTMLElement>())
   const roles = useRegistry((r) => r.reg.roles)
   const teams = useRegistry((r) => r.reg.teams)
-  const chief = useCrew((s) => s.crew.chief)
+  const chief = useTeam((s) => s.team.chief)
   const lay = useMemo(() => layout(mesh.agents, teams ?? [], roles, chief), [mesh.agents, teams, roles, chief])
   const talks = useMemo(() => mesh.talks ?? [], [mesh.talks])
   const segs = useSegments(root, els, lay, `${lay.lanes.map((l) => l.rows.map((r) => r.id).join(',')).join('|')}:${talks.map((t) => `${t.cardId}${t.state}`).join(',')}`, chief)

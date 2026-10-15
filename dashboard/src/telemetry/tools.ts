@@ -2,11 +2,11 @@ import { api } from './live/client'
 import { agentFeed } from './hooks/feeds'
 import { reloadFeed } from './feed'
 import { useMode } from './mode'
-import { ownerName } from './crew'
+import { ownerName } from './team'
 
 // Skills, MCP servers, AI enhance and backup-now (bridge/tools.py, bridge/jobs.py). Live: the bridge; the network ones run
 // as jobs on the VM and are polled. Demo: plausible answers in this tab, nothing leaves the page. Agents are named by their
-// Hermes profile here; the bridge also accepts the crew's ids.
+// Hermes profile here; the bridge also accepts the team's ids.
 
 const isLive = () => useMode.getState().mode === 'live'
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
@@ -370,7 +370,7 @@ export interface IntegrationCard {
   described: boolean
   /** false: kept on the VM but nothing uses it, or an add-on that is not switched on. */
   inUse: boolean
-  /** The crew.json feature this optional add-on needs ('gmail', 'moodle', 'icloud', 'voice', 'backup'), or null. */
+  /** The hermes.json feature this optional add-on needs ('gmail', 'moodle', 'icloud', 'voice', 'backup'), or null. */
   addon?: string | null
   balance?: { value: number | null; currency?: string; limit?: number | null; resetAt?: number | null } | null
 }

@@ -1,4 +1,4 @@
-"""The Inbox: the owner's mail, read only, when the Gmail add-on is switched on (crew.json `features.gmail`).
+"""The Inbox: the owner's mail, read only, when the Gmail add-on is switched on (hermes.json `features.gmail`).
 
 Gmail is read with the same app password as the agents' `gmail_read.py`, the same way: the mailbox is SELECTed read-only
 and messages are fetched with BODY.PEEK, so reading never marks mail as read, and there is no APPEND, STORE, MOVE,
@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-import crew
+import team
 from actions import ActionError, Env
 FOLDERS = {"inbox": "INBOX", "drafts": '"[Gmail]/Drafts"'}
 LIST_LIMIT = 60
@@ -206,7 +206,7 @@ def do_summary(env: Env, a: dict, llm: Callable[..., str], model: str) -> dict:
         return {"headline": "Nothing in the inbox to sum up.", "points": [], "at": int(time.time() * 1000)}
     lines = "\n".join(f"{r['id']} | {'UNREAD ' if r['unread'] else ''}{time.strftime('%a %d %b %H:%M', time.localtime((r['at'] or 0) / 1000))} | "
                       f"{r['from']['name']} <{r['from']['address']}> | {r['subject']} | {r['snippet'][:160]}" for r in rows)
-    text = llm(Path(env.hermes_home) / ".env", SUMMARY.format(owner=crew.owner_name(env.hermes_home)), f"Emails, newest first:\n{lines}", 700, model=model, json_mode=True)
+    text = llm(Path(env.hermes_home) / ".env", SUMMARY.format(owner=team.owner_name(env.hermes_home)), f"Emails, newest first:\n{lines}", 700, model=model, json_mode=True)
     text = re.sub(r"^```\w*\n|\n?```$", "", text.strip()).strip()
     try:
         out = json.loads(text[text.index("{"):text.rindex("}") + 1])

@@ -1,6 +1,6 @@
-"""Who this install is for: the owner, the four agents and the switched-on add-ons, read from `<hermes home>/crew.json`.
+"""Who this install is for: the owner, the four agents and the switched-on add-ons, read from `<hermes home>/hermes.json`.
 
-The kit's installer writes crew.json (readable by user hermes); its add-on commands switch features on later. Nothing in
+The kit's installer writes hermes.json (readable by user hermes); its add-on commands switch features on later. Nothing in
 the bridge hard-codes a name: every agent name, the owner's name and the Mem0 user come from here. The file is re-read
 whenever it changes on disk (a stat per call), so switching an add-on on needs no restart.
 
@@ -10,7 +10,7 @@ whenever it changes on disk (a stat per call), so switching an add-on on needs n
      "agents": [{"id": "atlas", "profile": "default", "role": "chief", "name": "Atlas", "title": "Chief of Staff"}, ...],
      "features": {"voice": false, "gmail": false, "moodle": false, "icloud": false, "backup": false}}
 
-A missing or broken file falls back to a plain crew (Chief of Staff, Tutor, Assistant, Coach) so the page still works.
+A missing or broken file falls back to a plain team (Chief of Staff, Tutor, Assistant, Coach) so the page still works.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable
 
-FILE = "crew.json"
+FILE = "hermes.json"
 AGENT_ID_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
 OWNER_ID_RE = re.compile(r"^[a-z0-9]{1,32}$")
 PROFILE_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
@@ -49,7 +49,7 @@ def _text(value: Any, limit: int, default: str = "") -> str:
 
 
 def normalise(raw: Any) -> dict[str, Any]:
-    """Any JSON value -> a crew with every field present and checked. Bad agents are dropped; a crew needs a chief."""
+    """Any JSON value -> a team with every field present and checked. Bad agents are dropped; a team needs a chief."""
     raw = raw if isinstance(raw, dict) else {}
     o = raw.get("owner") if isinstance(raw.get("owner"), dict) else {}
     oid = _text(o.get("id"), 32).lower()
@@ -78,7 +78,7 @@ def normalise(raw: Any) -> dict[str, Any]:
 
 
 def load(hermes_home: str | Path = "/data/.hermes") -> dict[str, Any]:
-    """The crew, re-read when the file changes (mtime and size), else from memory."""
+    """The team, re-read when the file changes (mtime and size), else from memory."""
     path = Path(hermes_home) / FILE
     try:
         st = path.stat()
@@ -126,7 +126,7 @@ def agent_of(hermes_home: str | Path, profile: str) -> str:
 
 
 def name_of(hermes_home: str | Path, profile: str) -> str:
-    """The crew's name for a profile (or agent id); an agent added later is called by its profile id."""
+    """The team's name for a profile (or agent id); an agent added later is called by its profile id."""
     c = load(hermes_home)
     a = next((x for x in c["agents"] if profile in (x["profile"], x["id"])), None)
     return a["name"] if a else profile.capitalize()
@@ -145,7 +145,7 @@ def core_profiles(hermes_home: str | Path) -> list[str]:
 
 
 def public(hermes_home: str | Path, display: Callable[[str], str | None] | None = None) -> dict[str, Any]:
-    """GET /api/crew: what the page may know. No login, no Mem0 id. `display` gives a profile's renamed display name."""
+    """GET /api/team: what the page may know. No login, no Mem0 id. `display` gives a profile's renamed display name."""
     c = load(hermes_home)
     agents = []
     for a in c["agents"]:

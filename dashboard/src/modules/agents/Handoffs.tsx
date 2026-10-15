@@ -1,5 +1,5 @@
 import { agentName } from '@/telemetry/agents'
-import { useCrew } from '@/telemetry/crew'
+import { useTeam } from '@/telemetry/team'
 import { ago } from '@/lib/time'
 import { useNow } from '@/lib/useNow'
 import type { Handoff } from '@/telemetry/types'
@@ -8,7 +8,7 @@ import { KIND } from './shared'
 
 export function Handoffs({ handoffs, onOpen, className }: { handoffs: Handoff[]; onOpen: (id: string) => void; className?: string }) {
   useNow(30_000)
-  const chief = useCrew((s) => s.crew.chief)
+  const chief = useTeam((s) => s.team.chief)
   const name = (x: Handoff['from']) => (x === 'owner' ? 'You' : x === 'helper' ? 'A helper' : agentName(x))
   return (
     <Panel title="Handoffs" aside={<span className="text-2xs text-ink-faint">from the board</span>} className={className}>

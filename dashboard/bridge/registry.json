@@ -1,5 +1,5 @@
 {
-  "about": "What the dashboard knows about this install that it cannot read from the VM: names, who uses what, where secrets live, ports. Agents are named by their Hermes profile (default = the chief); the bridge turns profiles into the names in crew.json. Anything on the VM that is not described here still shows up (as 'found, not described yet'). Items with a 'feature' are optional add-ons: they show as off until crew.json switches that feature on.",
+  "about": "What the dashboard knows about this install that it cannot read from the VM: names, who uses what, where secrets live, ports. Agents are named by their Hermes profile (default = the chief); the bridge turns profiles into the names in hermes.json. Anything on the VM that is not described here still shows up (as 'found, not described yet'). Items with a 'feature' are optional add-ons: they show as off until hermes.json switches that feature on.",
   "integrations": [
     {"id": "deepseek", "name": "DeepSeek", "kind": "API key (required)", "usedBy": ["default", "tutor", "assistant", "coach"], "keys": ["DEEPSEEK_API_KEY"],
      "secret": "/data/.hermes/.env and each profile's .env (DEEPSEEK_API_KEY)", "fix": "top up at platform.deepseek.com, or paste a new key on the server with: sudo hermes-key deepseek",
@@ -44,7 +44,7 @@
   },
   "roles": {},
   "teams": [
-    {"id": "crew", "label": "Specialists", "members": ["tutor", "assistant", "coach"], "note": "one specialist each; the chief hands them cards"}
+    {"id": "specialists", "label": "Specialists", "members": ["tutor", "assistant", "coach"], "note": "one specialist each; the chief hands them cards"}
   ],
   "services": [
     {"unit": "hermes-gateway", "label": "Agents: Telegram and the API", "port": 8642},

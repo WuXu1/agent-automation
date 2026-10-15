@@ -11,10 +11,10 @@ from pathlib import Path
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # crewfix
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # hermesfix
 import bridge  # noqa: E402
 import feeds  # noqa: E402
-from crewfix import write_crew  # noqa: E402
+from hermesfix import write_setup  # noqa: E402
 
 NOW = 1_791_300_000.0          # 2026-10-06 ~11:00 UTC
 CONFIG_CHIEF = """\
@@ -113,7 +113,7 @@ class FeedsTest(unittest.TestCase):
         (root / "config.yaml").write_text(CONFIG_CHIEF)
         (root / "profiles" / "coach" / "config.yaml").write_text(CONFIG_COACH)
         (root / "profiles" / "coach" / "profile.yaml").write_text("description: 'Training and\n  swimming.'\ndescription_auto: false\ndisplay_name: Rocky\n")
-        write_crew(root)
+        write_setup(root)
         make_kanban(root / "kanban.db")
         make_proc(root / "proc")
         (root / "big").mkdir()
@@ -138,7 +138,7 @@ class FeedsTest(unittest.TestCase):
         by = {c["id"]: c for c in out["cards"]}
         self.assertNotIn("t_arch", by)
         self.assertNotIn("t_old", by)                    # done more than 14 days ago
-        self.assertEqual(by["t_run"]["assignee"], "sage")             # crew.json: profile tutor is Sage
+        self.assertEqual(by["t_run"]["assignee"], "sage")             # hermes.json: profile tutor is Sage
         self.assertEqual(by["t_run"]["startedAt"], int((NOW - 600) * 1000))
         self.assertEqual(by["t_new"]["createdBy"], "owner")
         self.assertEqual(by["t_new"]["title"], "Grocery list & milk")
@@ -159,7 +159,7 @@ class FeedsTest(unittest.TestCase):
         self.assertEqual(out["gateway"], {"ok": False, "version": None})
         by = {a["id"]: a for a in out["agents"]}
         self.assertEqual(list(by), ["atlas", "rocky"])    # the profiles that exist: the chief's home and profiles/coach
-        self.assertEqual(by["atlas"]["name"], "Atlas")    # no profile.yaml: the name comes from crew.json
+        self.assertEqual(by["atlas"]["name"], "Atlas")    # no profile.yaml: the name comes from hermes.json
         self.assertEqual([m["name"] for m in by["atlas"]["mcp"]], ["docs", "moodle", "maps"])
         self.assertEqual((by["rocky"]["blocked"], by["rocky"]["name"], by["rocky"]["core"]), (1, "Rocky", True))
         self.assertEqual(by["rocky"]["description"], "Training and swimming.")
@@ -206,7 +206,7 @@ class FeedsTest(unittest.TestCase):
     def test_missing_files_are_empty_not_errors(self):
         empty = feeds.Paths(hermes_home="/nonexistent", kanban_db="/nonexistent/k.db", gateway_url="http://127.0.0.1:9")
         self.assertEqual(feeds.board(empty, NOW)["cards"], [])
-        self.assertEqual([a["id"] for a in feeds.agents(empty, NOW)["agents"]], ["chief"])   # no crew.json: the plain fallback
+        self.assertEqual([a["id"] for a in feeds.agents(empty, NOW)["agents"]], ["chief"])   # no hermes.json: the plain fallback
 
     def test_bridge_routes(self):
         app = bridge.App(bridge.Mem0("http://127.0.0.1:9", "k", "sam"), Path(self.paths.hermes_home), ["sam@x"], self.paths)

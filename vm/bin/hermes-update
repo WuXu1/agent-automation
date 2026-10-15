@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# sudo hermes-update: fetch the latest version of this kit from GitHub and apply it (your answers, keys and SOUL.md edits are kept).
+# The kit lives on this server in /opt/agent-automation; the first run turns the plain copy there into a git clone.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || { echo "run it with sudo:  sudo hermes-update" >&2; exit 1; }
+KIT=/opt/agent-automation
+REPO=https://github.com/WuXu1/agent-automation
+cd "$KIT"
+if [ ! -d .git ]; then
+  git init -q
+  git remote add origin "$REPO"
+fi
+git fetch -q --depth 1 origin main
+if [ -z "$(git rev-parse -q --verify HEAD 2>/dev/null || true)" ]; then git reset -q --hard origin/main; else git pull -q --ff-only origin main || git reset -q --hard origin/main; fi
+echo "Kit is at $(git rev-parse --short HEAD). Applying it..."
+exec bash "$KIT/vm/install.sh" "$@"

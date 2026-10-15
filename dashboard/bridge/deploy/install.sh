@@ -3,7 +3,7 @@
 #   sudo bash <kit>/dashboard/bridge/deploy/install.sh          install or update, no questions asked
 #   sudo bash <kit>/dashboard/bridge/deploy/install.sh --undo   remove the services and the Tailscale address
 #
-# Needs: the kit's checkout with the prebuilt page (dashboard/dist/), Hermes and Mem0 installed, /data/.hermes/crew.json
+# Needs: the kit's checkout with the prebuilt page (dashboard/dist/), Hermes and Mem0 installed, /data/.hermes/hermes.json
 # (written by the kit's installer), python3, curl and a signed-in tailscale. Restarts nothing but its own service; the
 # restart helper it installs runs only when the page asks, and only through restart_when_quiet.sh.
 set -euo pipefail
@@ -12,7 +12,7 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)"          # <kit>/dashboard/bridge
 DIST="$(cd "$SRC/.." && pwd)/dist"                # <kit>/dashboard/dist
 DEST=/data/tools/hermes-dash
 STATE=/data/.hermes/hermes-dash
-CREW=/data/.hermes/crew.json
+TEAM=/data/.hermes/hermes.json
 UNIT=/etc/systemd/system/hermes-dash.service
 HELPERS=/usr/local/lib/hermes-dash
 PORT=8890
@@ -35,14 +35,14 @@ fi
 
 # -- checks before anything changes -------------------------------------------------------------------------------------
 [ -f "$DIST/index.html" ] || die "$DIST/index.html missing: the kit ships the page prebuilt; is the checkout complete?"
-for f in bridge.py crew.py feeds.py actions.py registry.py registry.json deploy/restart-gateway.sh deploy/restart_when_quiet.sh deploy/backup-now.sh deploy/hermes-dash.service; do
+for f in bridge.py team.py feeds.py actions.py registry.py registry.json deploy/restart-gateway.sh deploy/restart_when_quiet.sh deploy/backup-now.sh deploy/hermes-dash.service; do
   [ -f "$SRC/$f" ] || die "$f missing in $SRC"
 done
 id hermes >/dev/null 2>&1 || die "there is no 'hermes' user: install Hermes first"
 [ -f "$MEM0_ENV" ] || die "$MEM0_ENV missing: is Mem0 installed?"
 command -v tailscale >/dev/null || die "tailscale is not installed"
 systemctl is-active --quiet mem0-server || echo "install: warning: mem0-server is not running; the page will say so"
-[ -f "$CREW" ] || echo "install: warning: $CREW missing; the page will use plain names (Chief, Tutor, ...) until the kit writes it"
+[ -f "$TEAM" ] || echo "install: warning: $TEAM missing; the page will use plain names (Chief, Tutor, ...) until the kit writes it"
 
 PY_FILES=()
 for f in "$SRC"/*.py; do PY_FILES+=("$f"); done
@@ -69,23 +69,23 @@ install -d -o root -g root -m 755 "$HELPERS"
 install -o root -g root -m 755 "$SRC/deploy/restart-gateway.sh" "$SRC/deploy/restart_when_quiet.sh" "$SRC/deploy/backup-now.sh" "$HELPERS/"
 install -o root -g root -m 644 "$SRC"/deploy/hermes-dash-{restart,jobs,backup}.{path,service} /etc/systemd/system/
 
-# -- config.json (first install only): the Mem0 user and who may open the page, from crew.json ----------------------------
+# -- config.json (first install only): the Mem0 user and who may open the page, from hermes.json ----------------------------
 install -d -o hermes -g hermes -m 700 "$STATE"
 if [ ! -f "$STATE/config.json" ]; then
   TS_OWNER="$(tailscale status --json | python3 -I -c 'import json,sys; d=json.load(sys.stdin); print(d["User"][str(d["Self"]["UserID"])]["LoginName"])' 2>/dev/null || true)"
-  python3 -I - "$STATE/config.json" "$CREW" "$TS_OWNER" <<'PY'
+  python3 -I - "$STATE/config.json" "$TEAM" "$TS_OWNER" <<'PY'
 import json, re, sys
-out, crew_file, ts_owner = sys.argv[1], sys.argv[2], sys.argv[3].strip().lower()
+out, setup_file, ts_owner = sys.argv[1], sys.argv[2], sys.argv[3].strip().lower()
 try:
-    owner = json.load(open(crew_file)).get("owner") or {}
+    owner = json.load(open(setup_file)).get("owner") or {}
 except (OSError, ValueError):
     owner = {}
 user = str(owner.get("id") or "").strip().lower()
 login = str(owner.get("tailscale_login") or "").strip().lower() or ts_owner
 if not re.fullmatch(r"[a-z0-9]{1,32}", user):
-    sys.exit("crew.json has no valid owner.id (lowercase letters and digits): run the kit's installer first")
+    sys.exit("hermes.json has no valid owner.id (lowercase letters and digits): run the kit's installer first")
 if not login:
-    sys.exit("no Tailscale login: set owner.tailscale_login in crew.json, or sign this machine in to Tailscale")
+    sys.exit("no Tailscale login: set owner.tailscale_login in hermes.json, or sign this machine in to Tailscale")
 json.dump({"port": 8890, "static_dir": "/data/tools/hermes-dash/dist", "mem0_url": "http://127.0.0.1:8888",
            "mem0_env": "/data/.hermes/mem0-server/server.env", "mem0_user": user, "allowed_logins": [login]},
           open(out, "w"), indent=2)
@@ -113,7 +113,7 @@ curl -fsS -m 2 -H "Tailscale-User-Login: $LOGIN" "http://127.0.0.1:$PORT/api/hea
   journalctl -u hermes-dash -n 20 --no-pager; die "the bridge did not come up (log above); undo with --undo"; }
 code="$(curl -s -o /dev/null -w '%{http_code}' -m 5 -H "Tailscale-User-Login: $LOGIN" "http://127.0.0.1:$PORT/api/memories")"
 echo "Bridge up. Mem0 through the bridge: HTTP $code (200 = good)."
-for feed in crew agents infra board; do
+for feed in team agents infra board; do
   echo "  /api/$feed: HTTP $(curl -s -o /dev/null -w '%{http_code}' -m 20 -H "Tailscale-User-Login: $LOGIN" "http://127.0.0.1:$PORT/api/$feed")"
 done
 

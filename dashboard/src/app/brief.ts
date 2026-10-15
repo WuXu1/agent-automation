@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { BridgeError } from '@/telemetry/live/client'
 import { live } from '@/telemetry/live/actions'
 import { useMode } from '@/telemetry/mode'
-import { crewNow } from '@/telemetry/crew'
+import { teamNow } from '@/telemetry/team'
 
 type Phase = 'compose' | 'waiting' | 'done' | 'error'
 
@@ -20,9 +20,9 @@ interface Brief {
 
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
 
-/** The chief's name right now (from crew.json). */
+/** The chief's name right now (from hermes.json). */
 function chiefName(): string {
-  const c = crewNow()
+  const c = teamNow()
   return c.agents.find((a) => a.id === c.chief)?.name ?? 'the chief'
 }
 
@@ -42,7 +42,7 @@ export const useBrief = create<Brief>((set, get) => ({
     set({ phase: 'waiting', reply: null, error: null })
     if (useMode.getState().mode !== 'live') {
       await sleep(1800)
-      set({ phase: 'done', reply: `On it, ${crewNow().owner.name}. (Demo: ${chiefName()} did not really get this; switch to Live to send it.)` })
+      set({ phase: 'done', reply: `On it, ${teamNow().owner.name}. (Demo: ${chiefName()} did not really get this; switch to Live to send it.)` })
       return
     }
     try {

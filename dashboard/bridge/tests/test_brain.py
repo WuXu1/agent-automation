@@ -14,7 +14,7 @@ import brain  # noqa: E402
 import jobs  # noqa: E402
 import settings  # noqa: E402
 import test_actions as fixture  # noqa: E402  (the module, so its tests are not collected twice)
-from crewfix import write_crew  # noqa: E402
+from hermesfix import write_setup  # noqa: E402
 
 JOBS = {"jobs": [
     {"id": "cd1678c688ca", "name": "Eye ointment", "schedule": {"kind": "cron", "expr": "45 7 * * *", "display": "every day at 7:45am"},
@@ -114,7 +114,7 @@ class BrainTest(fixture.ActionsTest):
         self.assertEqual(out["deepseek"], {"balance": 14.48, "currency": "USD", "ok": True})
         self.assertNotIn("elevenlabs", out)                                   # the voice add-on is off
         self.assertNotIn("twilio", out)
-        write_crew(self.home, voice=True)
+        write_setup(self.home, voice=True)
         out = jobs.do_balances(self.env, {}, get)
         self.assertIn("error", out["elevenlabs"])                             # one failing does not stop the others
         self.assertEqual(out["deepseek"]["balance"], 14.48)

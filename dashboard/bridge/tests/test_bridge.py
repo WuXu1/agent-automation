@@ -11,9 +11,9 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))      # crewfix
+sys.path.insert(0, str(Path(__file__).resolve().parent))      # hermesfix
 import bridge  # noqa: E402
-from crewfix import LOGIN as OWNER  # noqa: E402
+from hermesfix import LOGIN as OWNER  # noqa: E402
 
 UUID_A = "11111111-2222-3333-4444-555555555555"
 UUID_B = "66666666-7777-8888-9999-000000000000"

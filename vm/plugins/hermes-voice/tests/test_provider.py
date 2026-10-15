@@ -8,7 +8,7 @@ PLUGIN_DIR = Path(__file__).resolve().parents[1]
 
 def load_plugin():
     spec = importlib.util.spec_from_file_location(
-        "crew_voice_under_test", PLUGIN_DIR / "__init__.py",
+        "hermes_voice_under_test", PLUGIN_DIR / "__init__.py",
         submodule_search_locations=[str(PLUGIN_DIR)])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -26,16 +26,16 @@ class ProviderTest(unittest.TestCase):
             self.synth_calls.append({"text": text, **kw})
             return b"OGGDATA"
         self.secrets = {"ELEVENLABS_API_KEY": "el-key"}
-        self.provider = self.mod.CrewVoiceProvider(
+        self.provider = self.mod.HermesVoiceProvider(
             llm=lambda messages: "The essay is in.", secret=self.secrets.get, synth=synth)
 
     def test_identity(self):
-        self.assertEqual(self.provider.name, "crew-voice")
+        self.assertEqual(self.provider.name, "hermes-voice")
         self.assertTrue(self.provider.voice_compatible)
         self.assertTrue(self.provider.is_available())
 
     def test_unavailable_without_elevenlabs_key(self):
-        p = self.mod.CrewVoiceProvider(llm=None, secret=lambda _n: None, synth=None)
+        p = self.mod.HermesVoiceProvider(llm=None, secret=lambda _n: None, synth=None)
         self.assertFalse(p.is_available())
 
     def test_synthesize_rewrites_long_text_in_the_profiles_voice(self):
@@ -66,7 +66,7 @@ class ProviderTest(unittest.TestCase):
         def llm(messages):
             seen["system"] = messages[0]["content"]
             return "Done."
-        p = self.mod.CrewVoiceProvider(llm=llm, secret=self.secrets.get,
+        p = self.mod.HermesVoiceProvider(llm=llm, secret=self.secrets.get,
                                          synth=lambda text, **kw: b"A")
         with tempfile.TemporaryDirectory() as d:
             p.synthesize("y" * 400, str(Path(d) / "a.ogg"), voice="VOICE_ASSIST")
@@ -94,19 +94,19 @@ class ProviderTest(unittest.TestCase):
     def test_availability_check_says_why_when_the_key_cannot_be_read(self):
         def boom(_name):
             raise RuntimeError("no scope")
-        p = self.mod.CrewVoiceProvider(llm=None, secret=boom, synth=None)
-        with self.assertLogs("hermes_plugins.crew_voice", level="WARNING") as logs:
+        p = self.mod.HermesVoiceProvider(llm=None, secret=boom, synth=None)
+        with self.assertLogs("hermes_plugins.hermes_voice", level="WARNING") as logs:
             self.assertFalse(p.is_available())
         self.assertIn("RuntimeError", logs.output[0])
 
     def test_rewrite_failure_is_logged_and_the_note_still_goes_out(self):
         def llm(_messages):
             raise TimeoutError("slow")
-        p = self.mod.CrewVoiceProvider(
+        p = self.mod.HermesVoiceProvider(
             llm=llm, secret=self.secrets.get,
             synth=lambda text, **kw: (self.synth_calls.append({"text": text, **kw}), b"A")[1])
         with tempfile.TemporaryDirectory() as d, \
-                self.assertLogs("hermes_plugins.crew_voice", level="WARNING") as logs:
+                self.assertLogs("hermes_plugins.hermes_voice", level="WARNING") as logs:
             p.synthesize("z" * 400 + ". More.", str(Path(d) / "a.ogg"))
         self.assertIn("TimeoutError", logs.output[0])
         self.assertEqual(len(self.synth_calls), 1)
