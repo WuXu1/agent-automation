@@ -8,6 +8,7 @@
 #   ./hermes key <name>        change a key: deepseek, gemini, elevenlabs, telegram-chief|tutor|assistant|coach|me
 #   ./hermes voice [off]       voice-note replies in each agent's own voice (ElevenLabs), or switch them off
 #   ./hermes addon <name> [off]   extras: gmail, moodle, backup
+#   ./hermes desktop           (Mac) the Hermes app, already connected to your server; nothing of Hermes runs on the Mac
 #   ./hermes backup-login      sign rclone in to Google Drive on this computer (for: ./hermes addon backup)
 #   ./hermes ssh               a terminal on the server
 #   ./hermes destroy           delete the server and everything on it (asks twice)
@@ -48,6 +49,7 @@ case "$cmd" in
   voice) remote "sudo hermes-voice ${1:-}" ;;
   addon) [ -n "${1:-}" ] || die "Which? gmail, moodle or backup (add 'off' to switch one off)"
          remote "sudo hermes-addon $1 ${2:-}" ;;
+  desktop) bash "$KIT_DIR/laptop/desktop.sh" "$@" ;;
   backup-login) bash "$KIT_DIR/vm/backup/laptop-authorize.sh" ;;
   ssh) need_vm; vm_ssh ;;
   destroy)

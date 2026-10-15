@@ -78,6 +78,7 @@ Talk to your agents on Telegram. Send a voice note and they understand it; typin
 | `./hermes voice` | **Voice replies**: send a voice note, get one back in that agent's own voice. You choose each agent's voice from ElevenLabs (free plan: about 60 short replies a month). [docs/VOICE.md](docs/VOICE.md) |
 | `./hermes addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
 | `./hermes addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
+| `./hermes desktop` | **The Hermes app on your Mac** (Mac only), already connected to your server. It builds just the app, nothing of Hermes runs on the Mac. Needs Tailscale on and about 10 minutes the first time |
 | `./hermes addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
 
 Phone calls aren't in this kit yet. Voice notes work.
