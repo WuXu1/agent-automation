@@ -24,7 +24,7 @@ FILE = "hermes.json"
 AGENT_ID_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
 OWNER_ID_RE = re.compile(r"^[a-z0-9]{1,32}$")
 PROFILE_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
-FEATURES = ("voice", "gmail", "moodle", "icloud", "backup")
+FEATURES = ("voice", "gmail", "moodle", "icloud", "backup", "studio")
 ROLES = ("chief", "tutor", "assistant", "coach")
 
 FALLBACK: dict[str, Any] = {
@@ -74,7 +74,7 @@ def normalise(raw: Any) -> dict[str, Any]:
     agents.sort(key=lambda a: a["profile"] != "default")           # the chief first, the rest in the file's order
     f = raw.get("features") if isinstance(raw.get("features"), dict) else {}
     return {"version": 1, "owner": owner, "timezone": _text(raw.get("timezone"), 64, "Europe/London"), "agents": agents,
-            "features": {k: f.get(k) is True for k in FEATURES}}
+            "features": {k: f.get(k) is True for k in FEATURES}, "studio": {"name": _text((raw.get("studio") or {}).get("name") if isinstance(raw.get("studio"), dict) else None, 40, "Content studio")}}
 
 
 def load(hermes_home: str | Path = "/data/.hermes") -> dict[str, Any]:
@@ -152,4 +152,4 @@ def public(hermes_home: str | Path, display: Callable[[str], str | None] | None 
         shown = display(a["profile"]) if display else None
         agents.append({**a, "name": shown or a["name"]})
     return {"owner": {"name": c["owner"]["name"], "pronouns": c["owner"]["pronouns"]}, "timezone": c["timezone"],
-            "chief": chief(c)["id"], "agents": agents, "features": dict(c["features"])}
+            "chief": chief(c)["id"], "agents": agents, "features": dict(c["features"]), "studio": dict(c["studio"])}

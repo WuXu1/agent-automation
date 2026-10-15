@@ -1,6 +1,6 @@
-"""cy_common.py - what every Could You? tool shares: where the data lives, the four JSON files, ids, settings, and small helpers.
+"""cy_common.py - what every the content studio tool shares: where the data lives, the four JSON files, ids, settings, and small helpers.
 
-The studio's data is plain JSON under /data/couldyou (COULDYOU_ROOT overrides it for tests):
+The studio's data is plain JSON under /data/studio (STUDIO_ROOT overrides it for tests):
   library.json   the clips Reuben uploaded: a small 1080x1920 copy of each, what the AI saw in it, when it was last used
   lines.json     the overlay texts ("could you let go of this feeling holding you back"): approved ones are used, suggested ones wait for his yes
   sounds.json    TikTok sound links with a note on the mood of each
@@ -22,7 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-ROOT = Path(os.environ.get("COULDYOU_ROOT", "/data/couldyou"))
+ROOT = Path(os.environ.get("STUDIO_ROOT", "/data/studio"))
 
 DEFAULT_SETTINGS = {
     "post_every_days": 2,        # one post every 1-2 days to start (Reuben)
@@ -33,9 +33,11 @@ DEFAULT_SETTINGS = {
     "sound_rest_days": 7,        # nor a sound
     "cta_every": 6,              # every Nth post carries the soft book line (kind "cta"); 0 = never
     "caption_hashtags": [],      # added under every caption, e.g. ["#scotland"]
+    "page_name": "Content studio",
+    "page_brief": "a calm, meditative short-video page of raw, quiet scenes with a few plain words laid over them",   # what the AI is told the page is
 }
 DEFAULT_STYLE = {
-    "font": "",                  # a font file in /data/couldyou/fonts, or empty = the first of Inter / DejaVu Sans on the server
+    "font": "",                  # a font file in /data/studio/fonts, or empty = the first of Inter / DejaVu Sans on the server
     "size_pct": 4.6,             # text height as a share of the video's height
     "color": "white",
     "shadow": True,
@@ -104,6 +106,8 @@ def settings() -> dict:
     for k, v in DEFAULT_SETTINGS.items():                       # a hand-edited bad value falls back instead of breaking the planner
         if isinstance(v, int) and not isinstance(s[k], int):
             s[k] = v
+    s["page_brief"] = str(s["page_brief"])[:400]
+    s["page_name"] = str(s["page_name"])[:40]
     s["post_every_days"] = max(1, min(14, int(s["post_every_days"])))
     s["plan_days"] = max(1, min(30, int(s["plan_days"])))
     s["post_seconds"] = max(5, min(60, int(s["post_seconds"])))
@@ -182,7 +186,7 @@ def probe(path: Path) -> dict:
 
 
 def font_path(name: str = "") -> str:
-    """The font file the text is drawn with: the one named in the style (uploaded to /data/couldyou/fonts), else the first server font that exists."""
+    """The font file the text is drawn with: the one named in the style (uploaded to /data/studio/fonts), else the first server font that exists."""
     if name:
         cand = paths()["fonts"] / Path(name).name
         if cand.is_file():

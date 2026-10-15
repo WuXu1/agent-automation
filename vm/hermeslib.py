@@ -5,6 +5,7 @@ Commands:
   configs        write the four config.yaml files (our settings merged over what is there; nothing else of theirs is lost)
   souls          write each SOUL.md and the seed USER.md, only where none exists yet (yours to edit afterwards)
   skills         copy the kit's skills into the right profiles (ours: replaced on every run)
+  studio         the content-studio add-on's four profiles: settings, SOUL.md and manual (only when features.studio is on)
   workspace      house rules for /data/workspace, the owner's notebook folder
   briefing       print the morning briefing prompt (for `hermes cron create`)
   env-set FILE KEY      set KEY in an .env file to the value read from stdin (never from the command line)
@@ -34,6 +35,8 @@ WORKSPACE = Path(os.environ.get("HERMES_SETUP_WORKSPACE", "/data/workspace"))
 ROLES = ("chief", "tutor", "assistant", "coach")
 PROFILE = {"chief": "default", "tutor": "tutor", "assistant": "assistant", "coach": "coach"}
 ROLE_SKILL = {"chief": "team-lead", "tutor": "tutor", "assistant": "assistant", "coach": "coach"}
+# The content studio add-on (vm/studio): four board workers under the chief, each its own profile; `hermes-addon studio` creates them, `hermeslib.py studio` fills them.
+STUDIO_PROFILES = ("contentdirector", "clipcurator", "overlaycopywriter", "videoeditor")
 ID_RX = re.compile(r"^[a-z][a-z0-9]{0,23}$")
 NAME_RX = re.compile(r"^[A-Za-z][A-Za-z0-9 '\-]{0,23}$")
 RESERVED_IDS = {"default", "user", "worker", "dashboard", "all", "none", "test", "helper", "owner",
@@ -67,6 +70,7 @@ def placeholders(team: dict) -> dict:
         "{{TIMEZONE}}": team.get("timezone", "UTC"),
         "{{HOME_PLACE}}": (team.get("home") or {}).get("name") or "not given",
         "{{STUDIES}}": team.get("studies") or "not given",
+        "{{STUDIO}}": str((team.get("studio") or {}).get("name") or "your page")[:40],
     }
 
 
@@ -139,7 +143,7 @@ def overlay(team: dict, role: str) -> dict:
                           "unload_after_idle_seconds": 300}},
         "memory": {"provider": "mem0", "allow_unattended_consolidation": True},
         "delegation": {"max_iterations": 40, "max_concurrent_children": 3, "max_spawn_depth": 1, "orchestrator_enabled": False},
-        "skills": {"auto_load": [ROLE_SKILL[role]]},
+        "skills": {"auto_load": [ROLE_SKILL[role]] + (["studio-handoff"] if role == "chief" and feats.get("studio") else [])},
         "plugins": {"enabled": plugins},
         "cron": {"wrap_response": True, "wrapper_show_job_id": False, "wrapper_footer": "", "wrapper_header": "⏰ Reminder"},
         "telemetry": {"shared_metrics": {"enabled": False, "send": False}},
@@ -252,11 +256,46 @@ def write_skills(team: dict) -> list[str]:
         done.append(f"{PROFILE[role]}: {ROLE_SKILL[role]}")
         if role in ("chief", "assistant", "coach"):
             copy_tree(s / "productivity" / "weather-forecast", h / "productivity" / "weather-forecast", team)
+        if role == "chief":
+            handoff = h / "creative" / "studio-handoff"
+            if feats.get("studio"):
+                copy_tree(KIT / "studio" / "skills" / "studio-handoff", handoff, team)
+                done.append(f"{PROFILE[role]}: studio-handoff")
+            elif handoff.exists():
+                shutil.rmtree(handoff)
         gmail = h / "email" / "gmail-reader"
         if role in ("chief", "assistant") and feats.get("gmail"):
             copy_tree(s / "email" / "gmail-reader", gmail, team)
         elif gmail.exists():
             shutil.rmtree(gmail)
+    return done
+
+
+def write_studio(team: dict) -> list[str]:
+    """The four content-team profiles (made by `hermes-addon studio`): their settings merged over what is there, their SOUL.md and their manual. Only when the feature is on."""
+    done: list[str] = []
+    if not team.get("features", {}).get("studio"):
+        return done
+    for p in STUDIO_PROFILES:
+        home = home_of(p)
+        if not (home / "config.yaml").exists():
+            continue                                                            # the profile is created by the add-on's installer
+        src = KIT / "studio" / "profiles" / p
+        old = yaml.safe_load((home / "config.yaml").read_text()) or {}
+        new = merge(old, yaml.safe_load((src / "config.overlay.yaml").read_text()) or {})
+        if new != old:
+            shutil.copy2(home / "config.yaml", home / "config.yaml.bak-before-studio")
+            tmp = home / ".config.yaml.new"
+            tmp.write_text("# Written by agent-automation (vm/hermeslib.py studio). Your own changes to other settings are kept on updates.\n"
+                           + yaml.safe_dump(new, sort_keys=False, allow_unicode=True))
+            os.replace(tmp, home / "config.yaml")
+            done.append(f"{p}: config")
+        soul = home / "SOUL.md"
+        text = render((src / "SOUL.md").read_text(), team)
+        if not soul.exists() or soul.read_text() != text:
+            soul.write_text(text)
+            done.append(f"{p}: SOUL")
+        copy_tree(KIT / "studio" / "skills" / "content-studio", home / "skills" / "creative" / "content-studio", team)
     return done
 
 
@@ -324,6 +363,9 @@ def main(argv: list[str]) -> int:
     elif cmd == "skills":
         for f in write_skills(team):
             print("skills", f)
+    elif cmd == "studio":
+        for f in write_studio(team):
+            print("studio", f)
     elif cmd == "workspace":
         write_workspace(team)
     elif cmd == "briefing":

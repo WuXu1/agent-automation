@@ -3,7 +3,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 fail=0
-for f in install.sh hermes laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/hermes-* vm/backup/hermes-backup vm/backup/hermes-addon-backup vm/backup/hermes-restore vm/backup/*.sh vm/tools/moodle/*.sh vm/tools/couldyou/cy dashboard/bridge/deploy/*.sh; do
+for f in install.sh hermes laptop/*.sh vm/*.sh vm/stages/*.sh vm/bin/hermes-* vm/backup/hermes-backup vm/backup/hermes-addon-backup vm/backup/hermes-restore vm/backup/*.sh vm/tools/moodle/*.sh vm/studio/*.sh vm/tools/studio/cy dashboard/bridge/deploy/*.sh; do
   [ -f "$f" ] || continue
   bash -n "$f" || { echo "syntax error: $f"; fail=1; }
 done
@@ -13,6 +13,6 @@ python3 -B -m unittest discover -s tests || fail=1
 python3 -B -m unittest discover -s vm/tools/weather || fail=1
 python3 -B -m unittest discover -s vm/plugins/hermes-voice/tests || fail=1
 python3 -B -m unittest discover -s vm/tools/brain/tests || fail=1
-python3 -B -m unittest discover -s vm/tools/couldyou/tests || fail=1
+python3 -B -m unittest discover -s vm/tools/studio/tests || fail=1
 python3 -B -m unittest discover -s dashboard/bridge/tests || fail=1
 [ $fail = 0 ] && echo "ALL CHECKS PASSED" || { echo "SOME CHECKS FAILED"; exit 1; }

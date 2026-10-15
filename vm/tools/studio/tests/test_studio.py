@@ -1,4 +1,4 @@
-"""The Could You? tools: a clip in, a post out; lines, sounds and the queue's rules. Needs ffmpeg. Run: python3 -m unittest discover -s vm/tools/couldyou/tests"""
+"""The the content studio tools: a clip in, a post out; lines, sounds and the queue's rules. Needs ffmpeg. Run: python3 -m unittest discover -s vm/tools/studio/tests"""
 import io
 import json
 import re
@@ -295,6 +295,14 @@ class Cli(Env):
         self.assertEqual((code, out["status"]), (0, "ok"))
         self.assertEqual(self.run_cli("lines", "list", "--status", "approved")[1]["lines"], [])
         self.assertEqual(len(self.run_cli("lines", "list", "--status", "suggested")[1]["lines"]), 1)
+
+    def test_a_clip_can_be_switched_off_with_a_reason_and_is_then_never_offered(self):
+        cid = self.add_clip("dark one")
+        self.assertEqual(self.run_cli("clip", "disable", cid)[1]["error"]["code"], "usage")
+        code, out = self.run_cli("clip", "disable", cid, "--reason", "mostly black")
+        self.assertEqual((code, out["disabled"]), (0, True))
+        self.assertEqual(cy.load("library")["clips"][cid]["disabled_reason"], "mostly black")
+        self.assertEqual(self.run_cli("candidates")[1]["clips"], [])
 
     def test_plan_candidates_and_queue_speak_in_json(self):
         pl.add_line("could you let go of this feeling", ["calm"], "approved", "line", "reuben")

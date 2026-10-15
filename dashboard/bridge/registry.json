@@ -28,7 +28,10 @@
      "secret": "each agent's .env (ELEVENLABS_API_KEY)", "fix": "a new key at elevenlabs.io, typed in on the server with: sudo hermes-key elevenlabs", "enable": "switch it on, on the server, with: sudo hermes-voice", "check": "builtin"},
     {"id": "drive", "name": "Google Drive (backups)", "kind": "rclone OAuth token (add-on)", "feature": "backup", "usedBy": [], "keys": [],
      "secret": "/etc/hermes-backup/rclone.conf (root only)", "fix": "sign rclone in again: see docs/BACKUPS.md, then run on the server: sudo hermes-addon backup",
-     "enable": "switch it on, on the server, with: sudo hermes-addon backup (docs/BACKUPS.md)", "check": "builtin"}
+     "enable": "switch it on, on the server, with: sudo hermes-addon backup (docs/BACKUPS.md)", "check": "builtin"},
+    {"id": "studio_gemini", "name": "Gemini (content studio)", "kind": "API key copy, one agent (add-on)", "feature": "studio", "usedBy": ["clipcurator"], "keys": ["STUDIO_GEMINI_KEY"],
+     "secret": "the Clip Curator's .env (STUDIO_GEMINI_KEY, a copy of the Gemini key)", "fix": "change the key with: sudo hermes-key gemini, then re-copy it with: sudo hermes-addon studio",
+     "enable": "switch it on, on the server, with: sudo hermes-addon studio", "note": "each new clip is watched once by Gemini Flash (about a cent)"}
   ],
   "ignoreKeys": ["API_SERVER_*", "LLM_MODEL"],
   "tools": [
@@ -42,9 +45,12 @@
     "moodle": "one session cookie; renew it when it expires",
     "openalex": "search for papers"
   },
-  "roles": {},
+  "roles": {"contentdirector": "Plans the posts and pairs clips, lines and sounds", "clipcurator": "Watches each new clip once and tags it",
+            "overlaycopywriter": "Writes overlay lines for you to approve", "videoeditor": "Makes the finished 15-second videos"},
   "teams": [
-    {"id": "specialists", "label": "Specialists", "members": ["tutor", "assistant", "coach"], "note": "one specialist each; the chief hands them cards"}
+    {"id": "specialists", "label": "Specialists", "members": ["tutor", "assistant", "coach"], "note": "one specialist each; the chief hands them cards"},
+    {"id": "studio", "label": "Content studio", "feature": "studio", "members": ["contentdirector", "clipcurator", "overlaycopywriter", "videoeditor"],
+     "note": "a department of board workers for a video page: the Content Director leads; they prepare posts and you approve each one"}
   ],
   "services": [
     {"unit": "hermes-gateway", "label": "Agents: Telegram and the API", "port": 8642},

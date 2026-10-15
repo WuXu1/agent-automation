@@ -1,5 +1,5 @@
 #!/bin/bash
-# The one command the Could You? team types:  /data/tools/couldyou/cy <command> [arguments]   (see cy_cli.py for the list)
+# The one command the the content studio team types:  /data/tools/studio/cy <command> [arguments]   (see cy_cli.py for the list)
 # A plain path with no variables in it, because Hermes' command scanner blocks `VAR=... && $VAR/...` as nested execution.
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 exec python3 "$here/cy_cli.py" "$@"

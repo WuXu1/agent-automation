@@ -44,10 +44,13 @@ def page_view(reg: dict, team: dict | None = None) -> dict:
         to_agent = {a["profile"]: a["id"] for a in team["agents"]}
         roles = {a["id"]: a["title"] for a in team["agents"]}
     ids = lambda xs: [to_agent.get(x, x) for x in xs if isinstance(x, str)]   # noqa: E731
+    on = lambda t: not t.get("feature") or (team or {}).get("features", {}).get(t["feature"])   # noqa: E731 - an add-on's department exists only while it is switched on
+    off_members = {m for t in reg["teams"] if isinstance(t, dict) and not on(t) for m in t.get("members", [])}
     return {"tools": [{**t, "who": ids(t.get("who", []))} for t in reg["tools"] if isinstance(t, dict)], "mcp": reg["mcp"],
-            "roles": {**{to_agent.get(k, k): v for k, v in reg["roles"].items()}, **roles},
-            "teams": [{"id": t.get("id", ""), "label": t.get("label", ""), "members": ids(t.get("members", [])), "note": t.get("note", ""),
-                       "planned": [p for p in t.get("planned", []) if isinstance(p, dict)]} for t in reg["teams"] if isinstance(t, dict)],
+            "roles": {**{to_agent.get(k, k): v for k, v in reg["roles"].items() if k not in off_members}, **roles},
+            "teams": [{"id": t.get("id", ""), "label": (team or {}).get("studio", {}).get("name") or t.get("label", "") if t.get("id") == "studio" else t.get("label", ""),
+                       "members": ids(t.get("members", [])), "note": t.get("note", ""), "planned": [p for p in t.get("planned", []) if isinstance(p, dict)]}
+                      for t in reg["teams"] if isinstance(t, dict) and on(t)],
             "services": {s["unit"]: {"label": s.get("label", ""), "port": s.get("port")} for s in reg["services"]}}
 
 

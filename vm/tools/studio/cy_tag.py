@@ -3,8 +3,8 @@
   tag <clip id> | --pending [--limit N]     watch the clip's small copy (Gemini Flash, one request; about a cent for a minute of video) and store tags in library.json
 
 What it records: a one-line summary, the mood, the scene, time of day and weather, how much moves, how calm it is, where in the clip the best 15 seconds start,
-and where on screen there is calm space for words. Plain web request (no extra software on the server). The key is read from COULDYOU_GEMINI_KEY (the
-Content team's shells get it) or GEMINI_API_KEY, or from the files named in COULDYOU_ENV_FILES; it is never printed.
+and where on screen there is calm space for words. Plain web request (no extra software on the server). The key is read from STUDIO_GEMINI_KEY (the
+Content team's shells get it) or GEMINI_API_KEY, or from the files named in STUDIO_ENV_FILES; it is never printed.
 """
 from __future__ import annotations
 
@@ -19,13 +19,12 @@ from typing import Any, Callable, Optional
 
 import cy_common as cy
 
-MODEL = os.environ.get("COULDYOU_GEMINI_MODEL", "gemini-3.8-flash")
+MODEL = os.environ.get("STUDIO_GEMINI_MODEL", "gemini-3.8-flash")
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 MAX_INLINE_MB = 18
-KEY_NAMES = ("COULDYOU_GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY")
+KEY_NAMES = ("STUDIO_GEMINI_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY")
 
-SYSTEM = ("You look at one short video clip for a calm, meditative TikTok page called \"Could you?\": raw, quiet scenes (mostly Scotland: fog, water, hills, light) "
-          "with a few plain words laid over them. Describe the clip for someone choosing which words and which sound suit it. Be literal and brief. "
+SYSTEM = ("You look at one short video clip for {brief}. Describe the clip for someone choosing which words and which sound suit it. Be literal and brief. "
           "Never invent what you cannot see. Answer only with the JSON asked for.")
 PROMPT = ("Watch this clip and fill in the JSON. best_start_s is where the strongest {n} seconds begin (0 if the whole clip is equally good). "
           "text_zone is where plain white text would sit best without covering the subject: top, center or bottom (pick the calmest, emptiest part of the frame "
@@ -46,13 +45,13 @@ def find_key() -> str:
     for name in KEY_NAMES:
         if os.environ.get(name, "").strip():
             return os.environ[name].strip()
-    for f in os.environ.get("COULDYOU_ENV_FILES", "").split(os.pathsep):
+    for f in os.environ.get("STUDIO_ENV_FILES", "").split(os.pathsep):
         if f and Path(f).is_file():
             for line in Path(f).read_text(errors="replace").splitlines():
-                m = re.match(r"\s*(?:export\s+)?(COULDYOU_GEMINI_KEY|GEMINI_API_KEY|GOOGLE_API_KEY)\s*=\s*(.*)$", line)
+                m = re.match(r"\s*(?:export\s+)?(STUDIO_GEMINI_KEY|GEMINI_API_KEY|GOOGLE_API_KEY)\s*=\s*(.*)$", line)
                 if m and m.group(2).strip().strip("\"'"):
                     return m.group(2).strip().strip("\"'")
-    raise cy.ToolError("missing_gemini_key", "no Gemini key for this tool (COULDYOU_GEMINI_KEY in the profile's .env and its terminal passthrough)")
+    raise cy.ToolError("missing_gemini_key", "no Gemini key for this tool (STUDIO_GEMINI_KEY in the profile's .env and its terminal passthrough)")
 
 
 def live_post(url: str, body: dict, key: str) -> dict:
@@ -105,8 +104,9 @@ def tag_clip(clip_id: str, post: Post = live_post, key: Optional[str] = None) ->
         raise cy.ToolError("no_viewing_copy", f"the small viewing copy of {rec.get('name')} is missing; remove the clip and upload it again")
     if small.stat().st_size > MAX_INLINE_MB * 1_000_000:
         raise cy.ToolError("too_big_to_watch", f"{rec.get('name')} is too long to watch in one go ({small.stat().st_size // 1_000_000} MB); upload a shorter clip")
-    secs = cy.settings()["post_seconds"]
-    body = {"systemInstruction": {"parts": [{"text": SYSTEM}]},
+    cfg = cy.settings()
+    secs = cfg["post_seconds"]
+    body = {"systemInstruction": {"parts": [{"text": SYSTEM.format(brief=cfg["page_brief"])}]},
             "contents": [{"role": "user", "parts": [{"inline_data": {"mime_type": "video/mp4", "data": base64.b64encode(small.read_bytes()).decode()}},
                                                     {"text": PROMPT.format(n=secs)}]}],
             "generationConfig": {"responseMimeType": "application/json", "responseSchema": SCHEMA, "temperature": 0.3}}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cy - the one command the Could You? team types (and the dashboard's own jobs call): /data/tools/couldyou/cy <command> ...
+"""cy - the one command the the content studio team types (and the dashboard's own jobs call): /data/tools/studio/cy <command> ...
 
   status                                   what is in the library, what is free, how far ahead the queue is planned
   ingest FILE [--name N]                   make the small copies of a raw clip (the dashboard does this itself on upload)
@@ -12,6 +12,7 @@
   lines add TEXT [--tags a,b] [--kind line|cta] [--status suggested|approved]     (an agent only ever adds "suggested"; Reuben approves)
   lines list [--status S]
   sounds list
+  clip disable CLIP --reason TEXT           skip a clip the page cannot use (dark, shaky, readable text, people close up); the owner can switch it back on in the dashboard
   check POST_ID                            is the finished video right (size, length, no sound track)?
 
 Every command prints one JSON line last: {"status": "ok", ...} or {"status": "failed", "error": {"code", "message"}}. Standard library only.
@@ -85,6 +86,7 @@ def run(argv: Optional[list[str]] = None) -> int:
     a = sub.add_parser("lines"); a.add_argument("action", choices=["add", "list"]); a.add_argument("text", nargs="?"); a.add_argument("--tags", default="")
     a.add_argument("--kind", default="line"); a.add_argument("--status", default="suggested")
     a = sub.add_parser("sounds"); a.add_argument("action", choices=["list"])
+    a = sub.add_parser("clip"); a.add_argument("action", choices=["disable"]); a.add_argument("clip"); a.add_argument("--reason", default="")
     a = sub.add_parser("check"); a.add_argument("post")
     args = p.parse_args(argv)
     try:
@@ -145,6 +147,10 @@ def run(argv: Optional[list[str]] = None) -> int:
         if args.cmd == "sounds":
             return emit({"status": "ok", "command": "sounds", "sounds": [{"id": s["id"], "title": s.get("title"), "artist": s.get("artist"), "mood": s.get("mood"), "notes": s.get("notes"),
                                                                          "last_used": s.get("last_used")} for s in cy.load("sounds")["sounds"].values() if not s.get("disabled")]})
+        if args.cmd == "clip":
+            if not args.reason.strip():
+                raise cy.ToolError("usage", "give a reason (--reason \"...\")")
+            return emit({"status": "ok", "command": "clip", **cy_ingest.set_disabled(args.clip, True, args.reason)})
         if args.cmd == "check":
             item = pl.find_item(cy.load("queue"), args.post)
             probs = cy_render.check((item.get("render") or {}).get("out", "")) if item.get("render") else ["no finished video yet"]

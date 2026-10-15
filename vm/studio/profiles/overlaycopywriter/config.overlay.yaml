@@ -1,0 +1,33 @@
+# Merged into /data/.hermes/profiles/overlaycopywriter/config.yaml by vm/studio/apply_overlay.py (only these keys are set).
+# A board worker: no chat, no memory, no voice; the dispatcher adds the kanban card tools itself, so only terminal, file and skills are listed.
+# The Clip Curator's tool reaches Gemini with STUDIO_GEMINI_KEY: Hermes will not pass GEMINI_API_KEY (a provider credential) to a terminal command,
+# so the installer stores the same key under this tool-specific name and terminal.env_passthrough lets it through.
+model:
+  default: deepseek-flash
+  provider: deepseek
+  supports_vision: false
+providers:
+  deepseek:
+    stale_timeout_seconds: 60
+agent:
+  reasoning_effort: medium
+  api_max_retries: 1
+  max_turns: 40
+platform_toolsets:
+  cli: [terminal, file, skills]
+skills:
+  auto_load: [content-studio]
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+  provider: ""
+  nudge_interval: 0
+auxiliary:
+  background_review:
+    enabled: false
+stt:
+  enabled: false
+terminal:
+  backend: local
+  cwd: /data/studio
+  env_passthrough: []

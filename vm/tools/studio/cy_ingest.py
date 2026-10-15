@@ -105,3 +105,19 @@ def remove(clip_id: str) -> dict:
     lib["clips"].pop(clip_id)
     cy.save("library", lib)
     return {"removed": clip_id, "name": rec.get("name"), "freed_mb": round((rec.get("bytes") or 0) / 1e6, 1)}
+
+
+def set_disabled(clip_id: str, disabled: bool, reason: str = "") -> dict:
+    """Switch a clip off (the planner skips it) or back on. An agent only ever switches one off, with a reason; Reuben can switch it back on."""
+    lib = cy.load("library")
+    rec = lib["clips"].get(clip_id)
+    if rec is None:
+        raise cy.ToolError("unknown_clip", f"no clip {clip_id}")
+    if disabled:
+        busy = uses_in_queue(clip_id)
+        if busy:
+            raise cy.ToolError("in_use", f"this clip is part of {len(busy)} planned post(s): change those first")
+    rec["disabled"] = bool(disabled)
+    rec["disabled_reason"] = reason.strip()[:160] if disabled else ""
+    cy.save("library", lib)
+    return {"clip": clip_id, "name": rec.get("name"), "disabled": rec["disabled"]}

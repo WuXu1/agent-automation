@@ -41,13 +41,13 @@ class TeamTest(unittest.TestCase):
     def test_api_team_contract(self):
         status, out = self.get("/api/team")
         self.assertEqual(status, 200)
-        self.assertEqual(set(out), {"owner", "timezone", "chief", "agents", "features"})
+        self.assertEqual(set(out), {"owner", "timezone", "chief", "agents", "features", "studio"})
         self.assertEqual(out["owner"], {"name": "Sam", "pronouns": "they/them"})          # no login, no Mem0 id
         self.assertEqual((out["chief"], out["timezone"]), ("atlas", "Europe/London"))
         self.assertEqual([(a["id"], a["profile"], a["role"], a["name"], a["title"]) for a in out["agents"]], [
             ("atlas", "default", "chief", "Atlas", "Chief of Staff"), ("sage", "tutor", "tutor", "Sage", "Tutor"),
             ("ivy", "assistant", "assistant", "Ivy", "Assistant"), ("rocky", "coach", "coach", "Rocky", "Coach")])
-        self.assertEqual(out["features"], {"voice": False, "gmail": False, "moodle": False, "icloud": False, "backup": False})
+        self.assertEqual(out["features"], {"voice": False, "gmail": False, "moodle": False, "icloud": False, "backup": False, "studio": False})
         self.assertNotIn("sam@example.com", json.dumps(out))
         self.assertEqual(self.app.handle("GET", "/api/team", {}, b"")[0], 401)               # Tailscale identity still needed
 
@@ -94,11 +94,28 @@ class TeamTest(unittest.TestCase):
         c = team.load(self.home)
         self.assertEqual(c["owner"], {"name": "Jo", "id": "owner", "pronouns": "they/them", "tailscale_login": ""})
         self.assertEqual([a["id"] for a in c["agents"]], ["boss", "zed"])                  # the chief first
-        self.assertEqual(c["features"], {"voice": False, "gmail": False, "moodle": False, "icloud": False, "backup": True})
+        self.assertEqual(c["features"], {"voice": False, "gmail": False, "moodle": False, "icloud": False, "backup": True, "studio": False})
         self.rewrite({"agents": [{"id": "zed", "profile": "tutor"}]})                      # no chief: the plain team
         self.assertEqual(team.chief(team.load(self.home))["id"], "chief")
         self.file.write_text("{not json")
         self.assertEqual(team.load(self.home)["owner"]["name"], "Owner")
+
+
+
+
+class StudioTeamTest(unittest.TestCase):
+    """The content studio's department only exists on the page while its add-on is on, and carries the page's own name."""
+
+    def test_the_department_follows_the_switch_and_the_page_name(self):
+        import registry
+        reg = registry.load()
+        chief = [{"id": "a", "profile": "default", "role": "chief", "name": "A", "title": "Chief"}]
+        off = registry.page_view(reg, team.normalise({"agents": chief}))
+        self.assertEqual([t["id"] for t in off["teams"]], ["specialists"])
+        on = registry.page_view(reg, team.normalise({"agents": chief, "features": {"studio": True}, "studio": {"name": "Could you?"}}))
+        studio = next(t for t in on["teams"] if t["id"] == "studio")
+        self.assertEqual((studio["label"], studio["members"]), ("Could you?", ["contentdirector", "clipcurator", "overlaycopywriter", "videoeditor"]))
+        self.assertEqual(on["roles"]["clipcurator"], "Watches each new clip once and tags it")
 
 
 if __name__ == "__main__":
