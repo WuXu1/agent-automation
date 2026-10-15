@@ -190,7 +190,7 @@ else
   # Node: the app's own build needs 22.22+, 24.11+ or 26+
   node_ok() { have node && node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit((a===22&&b>=22)||(a===24&&b>=11)||a>=26?0:1)' 2>/dev/null; }
   if ! node_ok; then
-    say "  The build needs Node (a programming tool). Installing Node 24 through Homebrew."
+    say "  The build needs Node (a programming tool). Installing Node 24 through Homebrew: about ten small downloads one after another (\"Bottle …\" lines are normal), 5-10 minutes."
     if ! have brew; then
       [ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"; [ -x /usr/local/bin/brew ] && eval "$(/usr/local/bin/brew shellenv)"
     fi
@@ -201,7 +201,7 @@ else
       [ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"; [ -x /usr/local/bin/brew ] && eval "$(/usr/local/bin/brew shellenv)"
       have brew || die "Homebrew didn't install. Open a new terminal and run this again."
     fi
-    brew install node@24 >/dev/null
+    brew install node@24
     NODE_BIN="$(brew --prefix node@24)/bin"; export PATH="$NODE_BIN:$PATH"
     node_ok || die "Node didn't install properly. Open a new terminal and run this again."
   fi
