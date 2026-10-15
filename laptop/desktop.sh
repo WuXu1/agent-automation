@@ -10,8 +10,8 @@
 # This builds ONLY the app (from the same Hermes release your server runs, so the two always match), signs it on this Mac, and saves one connection to your server
 # (over Tailscale, SSH) as the main one. The first start opens your agents straight away.
 #
-# It needs: this Mac on Tailscale (same account as the server), about 5 GB of free disk and 10-15 minutes the first time (it compiles the app). It installs Apple's
-# command line tools and Node 24 through Homebrew if they are missing. Re-running is safe: it fixes the connection and only rebuilds when asked.
+# It needs: this Mac on Tailscale (same account as the server), about 5 GB of free disk and 10-15 minutes the first time (it compiles the app). It asks for Apple's
+# command line tools if they are missing and downloads its own temporary Node (no Homebrew needed). Re-running is safe: it fixes the connection and only rebuilds when asked.
 # Never put a key or password on this command line: it asks for nothing secret (your Mac makes its own key and asks the server's admin login to accept it).
 set -euo pipefail
 
@@ -23,6 +23,7 @@ STATE_DIR="${HERMES_SETUP_STATE_DIR:-$HOME/.agent-automation}"
 SETTINGS="$STATE_DIR/settings"
 HH="$HOME/.hermes"                                         # where the app looks for its checkout (and puts its logs)
 SRC="$HH/hermes-agent"
+NODE_DIR="$HH/node-build"                                  # a temporary Node for the build (deleted afterwards)
 MARK="$SRC/.desktop-only-build"                            # says this checkout is ours (build only, no local agent)
 APP="${HERMES_DESKTOP_APP_DIR:-/Applications}/Hermes.app"       # (the folder can be overridden for tests)
 SUPPORT="$HOME/Library/Application Support/Hermes"
@@ -190,20 +191,23 @@ else
   # Node: the app's own build needs 22.22+, 24.11+ or 26+
   node_ok() { have node && node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit((a===22&&b>=22)||(a===24&&b>=11)||a>=26?0:1)' 2>/dev/null; }
   if ! node_ok; then
-    say "  The build needs Node (a programming tool). Installing Node 24 through Homebrew: about ten small downloads one after another (\"Bottle …\" lines are normal), 5-10 minutes."
-    if ! have brew; then
-      [ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"; [ -x /usr/local/bin/brew ] && eval "$(/usr/local/bin/brew shellenv)"
-    fi
-    if ! have brew; then
-      say "  Homebrew (the usual Mac installer for tools like this) isn't on this Mac yet; it asks for your Mac password."
-      [ "$(ask "Install Homebrew now? (y/n)" y)" = y ] || die "Install Homebrew from https://brew.sh (or Node 24 from https://nodejs.org), then run this again."
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/tty
-      [ -x /opt/homebrew/bin/brew ] && eval "$(/opt/homebrew/bin/brew shellenv)"; [ -x /usr/local/bin/brew ] && eval "$(/usr/local/bin/brew shellenv)"
-      have brew || die "Homebrew didn't install. Open a new terminal and run this again."
-    fi
-    brew install node@24
-    NODE_BIN="$(brew --prefix node@24)/bin"; export PATH="$NODE_BIN:$PATH"
-    node_ok || die "Node didn't install properly. Open a new terminal and run this again."
+    # Node straight from nodejs.org (a ready-made build, checked against its published checksum): no Homebrew, which on a very new or old macOS has no ready-made
+    # packages and compiles everything for hours. It lives in a folder that is deleted once the app is built; the finished app does not need it.
+    say "  The build needs Node (a programming tool). Downloading the official one from nodejs.org (about 45 MB)…"
+    case "$(uname -m)" in arm64) NARCH=arm64 ;; x86_64) NARCH=x64 ;; *) die "I don't know this Mac's chip ($(uname -m))." ;; esac
+    NBASE=https://nodejs.org/dist/latest-v22.x
+    NTMP="$(mktemp -d)"
+    curl -fsSL "$NBASE/SHASUMS256.txt" -o "$NTMP/SHASUMS256.txt" || die "Couldn't reach nodejs.org. Check this Mac's internet, then run this again."
+    NLINE="$(grep -E " node-v22[0-9.]*-darwin-$NARCH\.tar\.gz\$" "$NTMP/SHASUMS256.txt" | head -n 1)"
+    [ -n "$NLINE" ] || die "Couldn't find Node 22 for this Mac on nodejs.org."
+    NSUM="${NLINE%% *}"; NFILE="${NLINE##* }"
+    curl -fL --progress-bar "$NBASE/$NFILE" -o "$NTMP/$NFILE" || die "The Node download failed. Run this again."
+    [ "$(shasum -a 256 "$NTMP/$NFILE" | awk '{print $1}')" = "$NSUM" ] || die "The Node download didn't match its checksum, so I stopped. Run this again."
+    rm -rf "$NODE_DIR"; mkdir -p "$NODE_DIR"
+    tar -xzf "$NTMP/$NFILE" -C "$NODE_DIR" --strip-components=1
+    rm -rf "$NTMP"
+    export PATH="$NODE_DIR/bin:$PATH"
+    node_ok || die "Node didn't install properly. Run this again."
   fi
   ok "Node $(node -v), git, command line tools"
 
@@ -223,6 +227,7 @@ else
   [ -d "$APP" ] && { rm -rf "$HH/Hermes.app.previous"; mv "$APP" "$HH/Hermes.app.previous"; warn "There was already a Hermes.app: moved to $HH/Hermes.app.previous"; }
   ditto "$BUILT_APP" "$APP"
   codesign --verify --deep --strict "$APP" || die "The app's signature didn't check out; try again with --rebuild."
+  rm -rf "$NODE_DIR"
   printf '%s\n' "$HERMES_COMMIT" > "$HH/.desktop-built-commit"
   ok "Installed $APP"
 fi
