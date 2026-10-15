@@ -14,5 +14,6 @@ fi
 git fetch -q --depth 1 origin main
 if [ -z "$(git rev-parse -q --verify HEAD 2>/dev/null || true)" ]; then git reset -q --hard origin/main; else git pull -q --ff-only origin main || git reset -q --hard origin/main; fi
 echo "Kit is at $(git rev-parse --short HEAD). Applying it..."
+install -m 755 "$KIT/vm/bin/"hermes-* /usr/local/bin/     # the commands themselves follow the kit too
 cd /
 exec bash "$KIT/vm/install.sh" "$@"
