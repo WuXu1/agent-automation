@@ -70,9 +70,9 @@ export function Rail() {
   return (
     <>
       <nav aria-label="Views" className="pointer-events-auto z-20 hidden min-h-0 flex-col border-r border-line bg-deck/85 px-3 pt-3 pb-3 backdrop-blur-md md:row-span-2 md:flex">
-        <div className={cn('flex h-10 items-center gap-2.5', collapsed ? 'justify-center' : 'px-1.5')} title="Hermes Command">
+        <div className={cn('flex h-10 items-center gap-2.5', collapsed ? 'justify-center' : 'px-1.5')} title="Command Center">
           <Mark />
-          {!collapsed && <span className="truncate text-[14px] font-semibold tracking-[-0.02em]">Hermes Command</span>}
+          {!collapsed && <span className="truncate text-[14px] font-semibold tracking-[-0.02em]">Command Center</span>}
         </div>
         <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto">
           {SECTIONS.map((sec) => {

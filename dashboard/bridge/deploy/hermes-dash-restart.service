@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command: quiet gateway restart asked for from the dashboard
+Description=Command Center: quiet gateway restart asked for from the dashboard
 # At most three attempts in ten minutes, whatever the page does.
 StartLimitIntervalSec=600
 StartLimitBurst=3

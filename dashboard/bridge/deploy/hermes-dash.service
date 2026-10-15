@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command dashboard bridge (serves the page and a small /api in front of Mem0)
+Description=Command Center dashboard bridge (serves the page and a small /api in front of Mem0)
 After=network-online.target mem0-server.service
 Wants=network-online.target
 

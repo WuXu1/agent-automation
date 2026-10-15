@@ -1,4 +1,4 @@
-"""Hermes Command bridge: serves the dashboard and a small /api in front of Mem0 on the VM.
+"""Command Center bridge: serves the dashboard and a small /api in front of Mem0 on the VM.
 
 Python standard library only, one process (`hermes-dash.service`, user `hermes`), listening on 127.0.0.1:8890 and published
 tailnet-only by `tailscale serve --https=8444`. See README.md in this folder.
@@ -620,7 +620,7 @@ def read_env_value(path: Path, name: str) -> str:
 
 
 def main(argv: list[str] | None = None, serve: Callable[[http.server.HTTPServer], None] = lambda s: s.serve_forever()) -> None:
-    parser = argparse.ArgumentParser(description="Hermes Command bridge")
+    parser = argparse.ArgumentParser(description="Command Center bridge")
     parser.add_argument("--config", default="/data/.hermes/hermes-dash/config.json")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr)

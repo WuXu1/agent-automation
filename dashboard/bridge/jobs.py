@@ -403,7 +403,7 @@ def run_once(env: Env) -> int:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Hermes Command: the dashboard's network jobs")
+    parser = argparse.ArgumentParser(description="Command Center: the dashboard's network jobs")
     parser.add_argument("--config", default="/data/.hermes/hermes-dash/config.json")
     args = parser.parse_args(argv)
     cfg = json.loads(Path(args.config).read_text())

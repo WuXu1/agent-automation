@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install (or update) the Hermes Command dashboard on the VM, and publish it tailnet-only.
+# Install (or update) the Command Center dashboard on the VM, and publish it tailnet-only.
 #   sudo bash <kit>/dashboard/bridge/deploy/install.sh          install or update, no questions asked
 #   sudo bash <kit>/dashboard/bridge/deploy/install.sh --undo   remove the services and the Tailscale address
 #

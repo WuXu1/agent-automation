@@ -11,7 +11,7 @@ with the Azure for Students credit.
 | **Coach** | Training, food, sleep, habits and recovery, with the weather for outdoor plans |
 
 You name them. Each has its own Telegram bot, and they share one long-term memory (a "second brain") so what you tell one, the
-others know. You can also watch everything on **Hermes Command**, a private dashboard: the memory as a 3D star map, the agents
+others know. You can also watch everything on **Command Center**, a private dashboard: the memory as a 3D star map, the agents
 and what they're doing live, their board of jobs, the server's health and your balances.
 
 It runs [Hermes Agent](https://github.com/NousResearch/hermes-agent) (open source, by Nous Research) on a small Linux server
@@ -64,7 +64,7 @@ Talk to your agents on Telegram. Send a voice note and they understand it; typin
 | Command | What it does |
 |---|---|
 | `./hermes status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
-| `./hermes dashboard` | Opens Hermes Command (Tailscale must be on) |
+| `./hermes dashboard` | Opens Command Center (Tailscale must be on) |
 | `./hermes update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
 | `./hermes restart` | Restarts the agents (it waits until they're idle) |
 | `./hermes key deepseek` | Changes a key: `deepseek`, `gemini`, `elevenlabs`, `telegram-chief`… |
@@ -105,7 +105,7 @@ Don't "Stop" the server in the Azure portal to save credit: student subscription
 | Hermes Agent v0.21.5 | Pinned to one tested release, plus three small fixes in `vm/hermes-patches/`. It never updates itself; see [docs/UPDATING.md](docs/UPDATING.md) |
 | Your four agents | One process (`hermes-gateway`) runs all four, as an unprivileged user `hermes`. Settings come from `vm/crewlib.py`; personalities from `vm/agents/souls/` (yours to edit afterwards: `/data/.hermes/SOUL.md` and `profiles/*/SOUL.md`) |
 | Memory | [Mem0](https://github.com/mem0ai/mem0) with Postgres on the server; searching runs locally, so your notes aren't sent anywhere to be searched |
-| Dashboard | Hermes Command, only on your Tailscale network, only for your account |
+| Dashboard | Command Center, only on your Tailscale network, only for your account |
 | Security | No public ports at all. Keys are typed at hidden prompts and stored only on the server (mode 600). Security updates install themselves |
 
 More: [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md) · [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) · [docs/UPDATING.md](docs/UPDATING.md)

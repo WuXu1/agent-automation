@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command: watch for the dashboard's gateway-restart request
+Description=Command Center: watch for the dashboard's gateway-restart request
 
 [Path]
 PathExists=/data/.hermes/hermes-dash/restart.request

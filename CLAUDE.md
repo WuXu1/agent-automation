@@ -31,7 +31,7 @@ Follow the `setup-hermes` skill (`.claude/skills/setup-hermes/SKILL.md`). The sh
 | `vm/agents/` | Personality templates (`{{OWNER}}`, `{{CHIEF}}` … placeholders), role skills, house rules, the briefing prompt |
 | `vm/bin/hermes-*` | Server commands: `hermes-doctor`, `hermes-key`, `hermes-restart`, `hermes-voice`, `hermes-addon` |
 | `vm/backup/` | The optional nightly encrypted Google Drive backup and restore |
-| `dashboard/` | Hermes Command: React page (prebuilt in `dist/`) and a Python bridge (`dashboard/bridge`, tests in `bridge/tests`) |
+| `dashboard/` | Command Center: React page (prebuilt in `dist/`) and a Python bridge (`dashboard/bridge`, tests in `bridge/tests`) |
 
 ## Checks before committing
 `bash tests/run.sh` (shell syntax, Python tests for crewlib, the weather tool, the voice plugin and the dashboard bridge).

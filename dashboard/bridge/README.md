@@ -1,4 +1,4 @@
-# Hermes Command bridge
+# Command Center bridge
 
 One small Python process (standard library only) that serves the built dashboard and an `/api` in front of Mem0, the
 agents, the board and the VM. It runs on the VM as `hermes-dash.service` (user `hermes`, `127.0.0.1:8890`) and is published

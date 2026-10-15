@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command: watch for the dashboard's backup-now request
+Description=Command Center: watch for the dashboard's backup-now request
 
 [Path]
 PathExists=/data/.hermes/hermes-dash/backup.request

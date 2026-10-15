@@ -4,7 +4,7 @@
  your phone / laptop ──Telegram──▶ Telegram's servers ◀──(outgoing only)── your Azure server
         │                                                                   ├─ hermes-gateway: the 4 agents (user `hermes`)
         └──────────Tailscale (private)───────────────────────────────────▶ ├─ mem0-server + Postgres: shared memory
-                                                                            ├─ hermes-dash: Hermes Command (Tailscale only)
+                                                                            ├─ hermes-dash: Command Center (Tailscale only)
                                                                             └─ DeepSeek / Gemini APIs (outgoing)
 ```
 

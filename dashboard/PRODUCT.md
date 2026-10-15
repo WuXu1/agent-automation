@@ -44,7 +44,7 @@ reads them and is published tailnet-only with `tailscale serve`; the page calls 
 
 ## Brand Commitments
 
-Name: **Hermes Command**. Colour meanings are fixed (cyan memory, violet agents and priority, emerald healthy, amber runway and
+Name: **Command Center**. Colour meanings are fixed (cyan memory, violet agents and priority, emerald healthy, amber runway and
 limits, red errors and hard caps).
 
 ## Evidence on Hand

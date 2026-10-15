@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command: start the nightly backup now, asked for from the dashboard (backup add-on)
+Description=Command Center: start the nightly backup now, asked for from the dashboard (backup add-on)
 StartLimitIntervalSec=3600
 StartLimitBurst=4
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Hermes Command: watch for the dashboard's network jobs (AI enhance, memory sorting, skills hub, add-on checks)
+Description=Command Center: watch for the dashboard's network jobs (AI enhance, memory sorting, skills hub, add-on checks)
 
 [Path]
 PathExistsGlob=/data/.hermes/hermes-dash/jobs/*.req.json
