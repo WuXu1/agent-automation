@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# sudo hermes-brain on|link|rotate|off|status
+# Gives your memory (Mem0, the "second brain" the agents share) a private web address, so ChatGPT, the Gemini app or any other AI app that accepts a custom
+# "MCP" connector can read and add to the same memory. What an app adds appears next to what your agents remember.
+#   on      installs and starts it, prints the link
+#   link    prints the link again           rotate  makes a new link (the old one stops working at once)
+#   off     stops it (the memory itself is untouched)
+# The link is the password: anyone who has it can read your memory. Paste it only into the app's own connector box; never into a chat, a screenshot or a file.
+# It offers three tools: search, add, update (no delete). The address is a free Cloudflare "quick tunnel" and changes if the server reboots; run `sudo hermes-brain link` for the new one.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || { echo "run it with sudo:  sudo hermes-brain ${1:-on}" >&2; exit 1; }
+KIT=/opt/agent-automation
+DEST=/data/tools/brain
+TOKEN=/data/.hermes/mem0-remote.token
+CF=/usr/local/bin/cloudflared
+
+host_now() { journalctl -u hermes-brain-tunnel --no-pager 2>/dev/null | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1; }
+print_link() {
+  local h; h="$(host_now)"; [ -n "$h" ] || { echo "The tunnel has no address yet; try again in a few seconds." >&2; exit 1; }
+  echo; echo "Your link (keep it secret, it is the password to your memory):"; echo; echo "  $h/mcp/$(cat "$TOKEN")"; echo
+}
+new_token() { umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$TOKEN"; chown hermes:hermes "$TOKEN"; chmod 600 "$TOKEN"; }
+
+case "${1:-on}" in
+  on)
+    systemctl is-active --quiet mem0-server || { echo "Your memory server is not running (sudo hermes-doctor says why)." >&2; exit 1; }
+    [ -f /data/.hermes/mem0.json ] || { echo "/data/.hermes/mem0.json is missing: run sudo hermes-update first." >&2; exit 1; }
+    install -d -o hermes -g hermes -m 755 "$DEST"
+    install -o hermes -g hermes -m 755 "$KIT/vm/tools/brain/mem0_mcp.py" "$KIT/vm/tools/brain/remote_http.py" "$DEST/"
+    [ -s "$TOKEN" ] || new_token
+    if [ ! -x "$CF" ]; then
+      case "$(uname -m)" in x86_64) a=amd64 ;; aarch64|arm64) a=arm64 ;; *) echo "Unsupported processor $(uname -m)" >&2; exit 1 ;; esac
+      echo "Downloading Cloudflare's free tunnel program (about 40 MB)…"
+      curl -fsSL -m 180 -o /tmp/cloudflared "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$a"
+      install -o root -g root -m 755 /tmp/cloudflared "$CF"; rm -f /tmp/cloudflared
+    fi
+    cat > /etc/systemd/system/hermes-brain.service <<'UNIT'
+[Unit]
+Description=Hermes: your memory as a connector for ChatGPT and other AI apps (loopback only; the tunnel below makes it reachable)
+After=network-online.target mem0-server.service
+
+[Service]
+User=hermes
+Group=hermes
+ExecStart=/usr/bin/python3 -I /data/tools/brain/remote_http.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+MemoryMax=96M
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    cat > /etc/systemd/system/hermes-brain-tunnel.service <<'UNIT'
+[Unit]
+Description=Hermes: Cloudflare quick tunnel that gives hermes-brain a public https address (it changes if this restarts)
+After=network-online.target hermes-brain.service
+Wants=network-online.target
+
+[Service]
+User=nobody
+ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8895 --no-autoupdate
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=128M
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload
+    systemctl enable --now hermes-brain.service hermes-brain-tunnel.service >/dev/null 2>&1
+    for _ in $(seq 1 30); do [ -n "$(host_now)" ] && break; sleep 2; done
+    print_link
+    echo "Next: in ChatGPT (Settings > Connectors, with developer mode on) or the Gemini app (Connectors > Create custom app > Cloud MCP) add a custom connector and paste the link above."
+    ;;
+  link) print_link ;;
+  rotate) new_token; systemctl restart hermes-brain.service; echo "New link made; the old one no longer works."; print_link ;;
+  off) systemctl disable --now hermes-brain-tunnel.service hermes-brain.service >/dev/null 2>&1 || true; echo "Off. Nothing outside can reach your memory through it now." ;;
+  status) systemctl is-active hermes-brain hermes-brain-tunnel 2>&1 | paste -sd' ' ;;
+  *) echo "usage: sudo hermes-brain on|link|rotate|off|status" >&2; exit 2 ;;
+esac

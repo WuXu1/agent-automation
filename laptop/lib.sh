@@ -67,9 +67,19 @@ vm_ssh() {
 }
 vm_reachable() { vm_ssh -o BatchMode=yes -o ConnectTimeout=6 true >/dev/null 2>&1; }
 
-# Copy this kit to the VM (/opt/agent-automation), replacing the old copy. Excludes local junk; dashboard/dist is prebuilt.
+# Put the kit on the VM (/opt/agent-automation) as a git clone of the same repository, so the server can update itself (sudo hermes-update) and the folder
+# on this computer is no longer needed after setup. Falls back to copying this folder when the clone is not possible (no git on the server, a private fork, no network).
 ship_kit() {
-  local ip; ip="$(vm_ip)"
+  local url branch
+  url="$(git -C "$KIT_DIR" remote get-url origin 2>/dev/null || true)"; url="${url:-https://github.com/WuXu1/agent-automation}"
+  branch="$(git -C "$KIT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"; { [ -n "$branch" ] && [ "$branch" != HEAD ]; } || branch=main
+  case "$url" in https://*) ;; *) url=https://github.com/WuXu1/agent-automation ;; esac
+  if vm_ssh "set -e; command -v git >/dev/null; sudo rm -rf /opt/agent-automation.new; sudo git clone -q --depth 1 --branch '$branch' '$url' /opt/agent-automation.new;
+             sudo chmod 755 /opt/agent-automation.new; sudo rm -rf /opt/agent-automation.old; [ -d /opt/agent-automation ] && sudo mv /opt/agent-automation /opt/agent-automation.old;
+             sudo mv /opt/agent-automation.new /opt/agent-automation; sudo rm -rf /opt/agent-automation.old" 2>/dev/null; then
+    return 0
+  fi
+  warn "The server could not clone the kit from GitHub, so I'm copying this folder instead (keep this folder then; updates come from it)."
   tar -C "$KIT_DIR" --exclude .git --exclude node_modules --exclude '__pycache__' --exclude '.DS_Store' -czf - . \
     | vm_ssh 'set -e; t=$(mktemp -d); tar -xzf - -C "$t"; sudo rm -rf /opt/agent-automation.new; sudo mv "$t" /opt/agent-automation.new;
               sudo chown -R root:root /opt/agent-automation.new; sudo chmod -R go-w /opt/agent-automation.new; sudo chmod 755 /opt/agent-automation.new;

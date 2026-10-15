@@ -31,13 +31,18 @@ case "$cmd" in
   restart) remote "sudo hermes-restart $*" ;;
   logs) need_vm; vm_ssh "sudo journalctl -u hermes-gateway -n ${1:-80} --no-pager; sudo tail -n 40 /data/.hermes/logs/gateway.log" ;;
   update)
-    if [ -d "$KIT_DIR/.git" ] && have git; then
-      say "Getting the latest kit…"
-      git -C "$KIT_DIR" pull --ff-only || warn "Couldn't update the kit with git (local edits?). Applying the copy you have."
-    else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./hermes update."; fi
     need_vm
-    ship_kit && ok "Kit copied to the server"
-    vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty ;;
+    if vm_ssh 'test -d /opt/agent-automation/.git' 2>/dev/null; then
+      say "The server updates itself from GitHub…"
+      vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 hermes-update" </dev/tty
+    else
+      if [ -d "$KIT_DIR/.git" ] && have git; then
+        say "Getting the latest kit…"
+        git -C "$KIT_DIR" pull --ff-only || warn "Couldn't update the kit with git (local edits?). Applying the copy you have."
+      else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./hermes update."; fi
+      ship_kit && ok "Kit put on the server"
+      vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty
+    fi ;;
   key)   [ -n "${1:-}" ] || die "Which key? deepseek, gemini, elevenlabs, telegram-chief, telegram-tutor, telegram-assistant, telegram-coach"
          remote "sudo hermes-key $1" ;;
   voice) remote "sudo hermes-voice ${1:-}" ;;

@@ -51,7 +51,17 @@ create_vm() {
   local rg vm admin region
   rg="$(get AZ_RG)"; rg="${rg:-$RG_DEFAULT}"
   vm="$(get AZ_VM)"; vm="${vm:-$VM_DEFAULT}"
-  admin="$(get VM_ADMIN)"; admin="${admin:-azureuser}"
+  admin="$(get VM_ADMIN)"
+  if [ -z "$admin" ]; then
+    local def; def="$(id -un | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9_-' | cut -c1-30)"; def="${def:-me}"
+    case "$def" in root|admin|hermes|azureuser|ubuntu|[0-9]*) def="me" ;; esac
+    while :; do
+      admin="$(ask "Your login name on the server (lower-case letters and digits; you will type it in ssh commands)" "$def")"
+      case "$admin" in root|admin|hermes|azureuser|ubuntu) warn "That name is taken or reserved. Pick another."; continue ;; esac
+      printf '%s' "$admin" | grep -Eq '^[a-z][a-z0-9_-]{1,30}$' && break
+      warn "Use 2 to 31 lower-case letters, digits, - or _, starting with a letter."
+    done
+  fi
   put AZ_RG "$rg"; put AZ_VM "$vm"; put VM_ADMIN "$admin"
 
   if az vm show -g "$rg" -n "$vm" -o none 2>/dev/null; then

@@ -30,9 +30,9 @@ azure_login
 join_tailnet
 
 step "Step 4 of 4: set up the server"
-say "  Copying this kit to the server…"
+say "  Putting the kit on the server…"
 ship_kit
-ok "Kit copied to /opt/agent-automation on the server"
+ok "The kit lives on the server now (/opt/agent-automation)"
 say "  The rest happens on the server. It asks a few questions and your keys at hidden prompts"
 say "  (what you type or paste does not show; that's normal). Keys never touch this computer's disk."
 # -t: a real terminal on the server so hidden prompts work. The log here still never sees a key.
@@ -43,4 +43,5 @@ say
 ok "All done."
 "$KIT_DIR/hermes" status || true
 say
+say "${B}You can delete this folder now${N}: the server has its own copy and updates itself. To connect later: ssh $(vm_user)@$(vm_ip), then ${B}sudo hermes-doctor${N} (health), ${B}sudo hermes-update${N} (update), ${B}sudo hermes-addon${N} (Gmail, Moodle, backups)."
 say "Next: message your chief of staff on Telegram. ${B}./hermes help${N} lists everyday commands (dashboard link, updates, voice later)."
