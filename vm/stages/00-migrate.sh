@@ -4,19 +4,19 @@
 
 stage_migrate() {
   local H=/data/.hermes old=crew f d moved=0
-  mv_if() { [ -e "$1" ] && [ ! -e "$2" ] && mv "$1" "$2" && moved=1 && return 0; return 1; }
+  mv_if() { if [ -e "$1" ] && [ ! -e "$2" ]; then mv "$1" "$2"; moved=1; fi; return 0; }   # always succeeds: the installer stops on any error
 
-  mv_if "$H/$old.json" "$H/hermes.json" && ok "Your answers file is now $H/hermes.json"
+  if [ -e "$H/$old.json" ] && [ ! -e "$H/hermes.json" ]; then mv_if "$H/$old.json" "$H/hermes.json"; ok "Your answers file is now $H/hermes.json"; fi
   for d in "$H" "$H"/profiles/*; do
-    [ -d "$d" ] && mv_if "$d/.$old-soul-template" "$d/.hermes-soul-template"
-    for f in "$d"/*.bak-before-"$old"; do [ -e "$f" ] && mv_if "$f" "${f%-before-$old}-before-hermes"; done
+    if [ -d "$d" ]; then mv_if "$d/.$old-soul-template" "$d/.hermes-soul-template"; fi
+    for f in "$d"/*.bak-before-"$old"; do if [ -e "$f" ]; then mv_if "$f" "${f%-before-$old}-before-hermes"; fi; done
   done
   for f in "$H/config.yaml" "$H"/profiles/*/config.yaml; do
-    [ -f "$f" ] && grep -q "vm/${old}lib.py" "$f" && sed -i "s#vm/${old}lib.py#vm/hermeslib.py#" "$f" && moved=1
+    if [ -f "$f" ] && grep -q "vm/${old}lib.py" "$f"; then sed -i "s#vm/${old}lib.py#vm/hermeslib.py#" "$f"; moved=1; fi
   done
   mv_if "/etc/postgresql/16/main/conf.d/$old-small.conf" /etc/postgresql/16/main/conf.d/hermes-small.conf
   # the server commands: install the real hermes-* ones, then drop the old names (and any shortcuts that pointed at them)
   install -m 755 "$KIT/vm/bin/"hermes-* /usr/local/bin/
-  for f in /usr/local/bin/$old-*; do [ -e "$f" ] || [ -L "$f" ] && rm -f "$f" && moved=1; done
-  [ "$moved" = 1 ] && ok "Names brought up to date" || true
+  for f in /usr/local/bin/$old-*; do if [ -e "$f" ] || [ -L "$f" ]; then rm -f "$f"; moved=1; fi; done
+  if [ "$moved" = 1 ]; then ok "Names brought up to date"; fi
 }
