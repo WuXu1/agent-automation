@@ -43,5 +43,5 @@ say
 ok "All done."
 "$KIT_DIR/hermes" status || true
 say
-say "${B}You can delete this folder now${N}: the server has its own copy and updates itself. To connect later: ssh $(vm_user)@$(vm_ip), then ${B}sudo hermes-doctor${N} (health), ${B}sudo hermes-update${N} (update), ${B}sudo hermes-addon${N} (Gmail, Moodle, backups)."
+say "${B}You can delete this folder now${N}: the server has its own copy and looks after itself. Everything day to day happens in Telegram and on your dashboard. If something ever needs attention, open this kit in Claude Code and say 'help me with my setup'."
 say "Next: message your chief of staff on Telegram. ${B}./hermes help${N} lists everyday commands (dashboard link, updates, voice later)."
