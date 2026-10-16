@@ -98,7 +98,7 @@ PY
 [ -f "$DIR/voice.md" ] || install -o hermes -g hermes -m 644 /dev/stdin "$DIR/voice.md" <<VOICE
 # $name: the voice guide
 
-The Overlay Copywriter reads this every time before writing lines. Edit it in the dashboard (Style tab) or with the agents' help.
+The Overlay Copywriter reads this every time before writing lines. Edit it in the dashboard (Look & settings tab) or with the agents' help.
 
 ## What the page is
 (One or two sentences: what the scenes are, what the words do to the viewer.)

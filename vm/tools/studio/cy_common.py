@@ -194,7 +194,7 @@ def font_path(name: str = "") -> str:
     for f in FALLBACK_FONTS:
         if Path(f).is_file():
             return f
-    raise ToolError("no_font", "no usable font on this server (upload one on the Style tab)")
+    raise ToolError("no_font", "no usable font on this server (upload one on the Look & settings tab)")
 
 
 def rest_ok(last_iso: Optional[str], rest_days: int) -> bool:
