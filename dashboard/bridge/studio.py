@@ -461,6 +461,11 @@ def set_settings(store: Store, env: actions.Env, args: dict) -> dict:
             if any(not re.fullmatch(r"#[A-Za-z0-9_]{1,40}", t) for t in tags) or len(tags) > 10:
                 raise err(400, "Hashtags are letters, digits and _ (up to ten)")
             return tags
+        if k == "page_name":
+            name = str(v).strip()
+            if not 1 <= len(name) <= 40:
+                raise err(400, "The page name is 1 to 40 characters")
+            return name
         if k == "page_brief":
             text = str(v).strip()
             if not 10 <= len(text) <= 400:

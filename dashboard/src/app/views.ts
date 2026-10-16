@@ -1,7 +1,7 @@
-import { Bot, Gauge, Inbox, KanbanSquare, Orbit, Plug, Settings, type LucideIcon } from 'lucide-react'
+import { Bot, Clapperboard, Gauge, Inbox, KanbanSquare, Orbit, Plug, Settings, type LucideIcon } from 'lucide-react'
 import { useTeam, type Features } from '@/telemetry/team'
 
-export type ViewId = 'brain' | 'agents' | 'infra' | 'board' | 'inbox' | 'integrations' | 'settings'
+export type ViewId = 'brain' | 'agents' | 'infra' | 'board' | 'inbox' | 'studio' | 'integrations' | 'settings'
 
 /** The rail's groups: room for more tabs, each under a heading. */
 export type SectionId = 'memory' | 'work' | 'comms' | 'system'
@@ -27,6 +27,7 @@ export const VIEWS: readonly View[] = [
   { id: 'brain', section: 'memory', label: 'Second Brain', short: 'Brain', icon: Orbit, hint: 'Mem0 memories as a constellation' },
   { id: 'agents', section: 'work', label: 'Agent Studio', short: 'Agents', icon: Bot, hint: 'The chief, the team and their tools' },
   { id: 'board', section: 'work', label: 'Board', short: 'Board', icon: KanbanSquare, hint: 'The cards the team hands each other' },
+  { id: 'studio', section: 'work', label: 'Content studio', short: 'Studio', icon: Clapperboard, hint: 'Scenes, overlay lines, sounds and the posts to approve', feature: 'studio' },
   { id: 'inbox', section: 'comms', label: 'Inbox', short: 'Inbox', icon: Inbox, hint: 'Gmail, read only, with an AI summary', feature: 'gmail' },
   { id: 'infra', section: 'system', label: 'Runway', short: 'Runway', icon: Gauge, hint: 'Azure credit, the VM, backups' },
   { id: 'integrations', section: 'system', label: 'Integrations', short: 'Links', icon: Plug, hint: 'Sign-ins, keys, add-ons and balances' },

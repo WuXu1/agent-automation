@@ -195,6 +195,8 @@ class StudioTest(unittest.TestCase):
         self.assertEqual((code, s["post_every_days"], s["cta_every"], s["caption_hashtags"]), (200, 1, 5, ["#scotland", "#calm"]))
         self.assertEqual(self.req("POST", "/api/studio/settings", {"post_every_days": 99})[0], 400)
         self.assertEqual(self.req("POST", "/api/studio/settings", {"page_brief": "x"})[0], 400)
+        self.assertEqual(self.req("POST", "/api/studio/settings", {"page_name": "Could you?"})[1]["page_name"], "Could you?")
+        self.assertEqual(self.req("POST", "/api/studio/settings", {"page_name": ""})[0], 400)
         self.assertEqual(self.req("POST", "/api/studio/voice", {"text": "# voice\nshort and plain"})[0], 200)
         self.assertEqual(self.req("GET", "/api/studio/voice")[1]["text"], "# voice\nshort and plain")
         self.assertEqual(self.req("POST", "/api/studio/voice", {"text": "x" * 9000})[0], 400)

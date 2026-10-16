@@ -20,6 +20,7 @@ const VIEW = {
   infra: lazy(() => import('@/modules/infra')),
   board: lazy(() => import('@/modules/board')),
   inbox: lazy(() => import('@/modules/inbox')),
+  studio: lazy(() => import('@/modules/studio')),
   integrations: lazy(() => import('@/modules/integrations')),
   settings: lazy(() => import('@/modules/settings')),
 }

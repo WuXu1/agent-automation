@@ -14,7 +14,7 @@ export interface TeamAgent {
   name: string
   title: string
 }
-export interface Features { voice: boolean; gmail: boolean; moodle: boolean; icloud: boolean; backup: boolean }
+export interface Features { voice: boolean; gmail: boolean; moodle: boolean; icloud: boolean; backup: boolean; studio: boolean }
 export interface Team {
   owner: { name: string; pronouns: string }
   timezone: string
@@ -35,7 +35,7 @@ export const DEMO_TEAM: Team = {
     { id: 'ivy', profile: 'assistant', role: 'assistant', name: 'Ivy', title: 'Assistant' },
     { id: 'rocky', profile: 'coach', role: 'coach', name: 'Rocky', title: 'Coach' },
   ],
-  features: { voice: true, gmail: true, moodle: true, icloud: true, backup: true },
+  features: { voice: true, gmail: true, moodle: true, icloud: true, backup: true, studio: true },
 }
 
 /** Live mode before /api/team answers (or when it cannot): plain names, no add-ons. */
@@ -49,7 +49,7 @@ const PLAIN: Team = {
     { id: 'assistant', profile: 'assistant', role: 'assistant', name: 'Assistant', title: 'Assistant' },
     { id: 'coach', profile: 'coach', role: 'coach', name: 'Coach', title: 'Coach' },
   ],
-  features: { voice: false, gmail: false, moodle: false, icloud: false, backup: false },
+  features: { voice: false, gmail: false, moodle: false, icloud: false, backup: false, studio: false },
 }
 
 interface TeamStore {
