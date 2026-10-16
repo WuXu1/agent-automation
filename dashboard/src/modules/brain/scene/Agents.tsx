@@ -106,8 +106,11 @@ function useArcs(graph: MemoryGraph, where: Map<AgentId, THREE.Vector3>) {
 }
 
 export function Agents({ graph, labels }: { graph: MemoryGraph; labels: boolean }) {
-  const roster = useRoster((s) => s.list)
+  const everyone = useRoster((s) => s.list)
+  const team = useTeam((s) => s.team.agents)
   const chief = useTeam((s) => s.team.chief)
+  // only the owner's own agents are pink dots; the content team's workers never touch the memory
+  const roster = useMemo(() => everyone.filter((a) => team.some((t) => t.id === a.id)), [everyone, team])
   const where = useMemo(() => stations(roster.map((a) => a.id), chief), [roster, chief])
   const arcs = useArcs(graph, where)
   const halo = useRef<THREE.Group>(null)

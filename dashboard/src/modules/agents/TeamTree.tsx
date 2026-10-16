@@ -20,7 +20,7 @@ import { HELPERS, KIND } from './shared'
  */
 
 /** Team tints: violet shifted in hue, so every line still reads as "agent" (DESIGN.md). */
-const TINT: Record<string, string> = { specialists: '#c084fc' }
+const TINT: Record<string, string> = { specialists: '#c084fc', studio: '#818cf8' }
 const PALETTE = ['#a78bfa', '#e879f9', '#93c5fd']
 const AMBER = '#f59e0b'
 const INDENT = 34
