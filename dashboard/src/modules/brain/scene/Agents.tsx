@@ -121,6 +121,8 @@ export function Agents({ graph, labels }: { graph: MemoryGraph; labels: boolean 
 
   return (
     <>
+      {/* drei leaves the first <Html> it mounts in a canvas empty (the chief's name was the one missing), so a throwaway one goes first */}
+      <Html style={{ pointerEvents: 'none' }} zIndexRange={[0, 0]}><span /></Html>
       <group ref={arcs} />
       <group ref={halo}>
         {roster.map((a) => (
@@ -141,7 +143,7 @@ export function Agents({ graph, labels }: { graph: MemoryGraph; labels: boolean 
           <Html center position={[0, a.id === chief ? -0.62 : -0.48, 0]} style={{ pointerEvents: 'none' }} zIndexRange={[5, 0]}>
             <div className="text-center whitespace-nowrap transition-opacity duration-200 select-none" style={{ opacity: labels ? 0.85 : 0 }}>
               <div className="text-[10.5px] font-semibold tracking-[0.01em] text-[#f0abfc]">{a.name}</div>
-              {a.id === chief && <div className="text-[9.5px] text-ink-faint">{a.role}</div>}
+              <div className="text-[9.5px] text-ink-faint">{a.role}</div>
             </div>
           </Html>
         </group>
