@@ -31,8 +31,16 @@ Follow the `setup-hermes` skill (`.claude/skills/setup-hermes/SKILL.md`). The sh
 | `vm/agents/` | Personality templates (`{{OWNER}}`, `{{CHIEF}}` … placeholders), role skills, house rules, the briefing prompt |
 | `vm/bin/hermes-*` | Server commands: `hermes-doctor`, `hermes-key`, `hermes-restart`, `hermes-voice`, `hermes-addon` |
 | `vm/backup/` | The optional nightly encrypted Google Drive backup and restore |
+| `vm/studio/`, `vm/tools/studio/` | The optional content studio add-on (`sudo hermes-addon studio`): four agents, the `cy` tools, a worker service; how it works: `docs/STUDIO.md` |
 | `dashboard/` | Command Center: React page (prebuilt in `dist/`) and a Python bridge (`dashboard/bridge`, tests in `bridge/tests`) |
 
 ## Checks before committing
 `bash tests/run.sh` (shell syntax, Python tests for hermeslib, the weather tool, the voice plugin and the dashboard bridge).
 If you change the dashboard's source, run `npm ci && npm run lint && npm run build` in `dashboard/` and commit `dist/` too.
+
+## Working from a cloud session (Claude Code on the web)
+- The server has no public SSH: join the owner's tailnet first (`tailscale up` with an auth key kept as a secret in the environment, or a login link the owner approves), then
+  ssh over `tailscale nc <host> 22`. A container holds more than one tailnet login (`tailscale switch --list`, `tailscale switch <id>`): switch back to the user's own when done.
+- Deploy a change with `sudo hermes-update` on the server (git pull into `/opt/agent-automation`, then `vm/install.sh`). Restart only with `sudo hermes-restart`.
+- Keep the notes true as you go: in the same commit as each change update the docs that describe it (`docs/STUDIO.md` for the studio), and tell the user what you changed in plain words.
+- Never put a key, token, address of a private machine or phone number in this public repo.
