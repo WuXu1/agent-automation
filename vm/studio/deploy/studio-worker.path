@@ -1,0 +1,9 @@
+[Unit]
+Description=Content studio: watch for requests from the dashboard and the agents
+
+[Path]
+PathExistsGlob=/data/studio/requests/*.json
+Unit=studio-worker.service
+
+[Install]
+WantedBy=multi-user.target

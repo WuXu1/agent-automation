@@ -340,6 +340,21 @@ def skip(item_id: str) -> dict:
     return item
 
 
+def unskip(item_id: str) -> dict:
+    """Takes a skipped post back: ready if its video is still there, else proposed (its clip, line and sound must still be free)."""
+    q = cy.load("queue")
+    item = find_item(q, item_id)
+    if item["status"] != "skipped":
+        raise cy.ToolError("not_skipped", "this post is not skipped")
+    h = held([i for i in q["items"] if i["id"] != item_id])
+    for k in ("clip", "line", "sound"):
+        if item.get(k) and item[k] in h[k]:
+            raise cy.ToolError("held", f"another planned post now uses this post's {k}: change it first")
+    item["status"] = "ready" if item.get("render") else "proposed"
+    cy.save("queue", q)
+    return item
+
+
 def mark(item_id: str, status: str) -> dict:
     """delivered (sent to Reuben) or posted (he posted it). Posted is what makes the clip, line and sound count as used."""
     if status not in ("delivered", "posted"):

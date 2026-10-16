@@ -42,7 +42,7 @@ def compact_candidates() -> dict:
     cfg = cy.settings()
     q = cy.load("queue")["items"]
     h = pl.held(q)
-    clips = [{"id": c["id"], "name": c["name"], "dur": c["duration"], **{k: (c["tags"] or {}).get(k) for k in ("summary", "mood", "scene", "time_of_day", "calm", "quality", "has_people")}}
+    clips = [{"id": c["id"], "name": c["name"], "dur": c["duration"], **{k: (c["tags"] or {}).get(k) for k in ("summary", "mood", "scene", "time_of_day", "calm", "quality", "has_people", "has_readable_text", "problems")}}
              for c in pl.free_clips(cfg, h["clip"])]
     lines = [{"id": l["id"], "text": l["text"], "kind": l.get("kind", "line"), "tags": l.get("tags")} for k in ("line", "cta") for l in pl.free_lines(k, cfg, h["line"])]
     sounds = [{"id": s["id"], "title": s.get("title"), "artist": s.get("artist"), "mood": s.get("mood"), "notes": s.get("notes")} for s in pl.free_sounds(cfg, h["sound"])]

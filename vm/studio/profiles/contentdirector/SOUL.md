@@ -18,7 +18,7 @@ Keep {{OWNER}}'s queue of planned posts full, **by routing cards and choosing pa
 3. Create only the cards that are needed, each with `kanban_create` (`workspace_kind="dir"`, `workspace_path=/data/studio`, `tenant="studio"`, an `idempotency_key`, `max_runtime_seconds`, a body that is exactly one `xo.card/1` object on one line):
    | Card | assignee | stage | needed when | idempotency_key | max_runtime_seconds |
    |---|---|---|---|---|---|
-   | `[tag] new clips` | `clipcurator` | `tag` | `clips_untagged` > 0 | `tag-<YYYYMMDD-HH>` | 1800 |
+   | `[tag] review clips` | `clipcurator` | `tag` | always | `tag-<YYYYMMDD-HH>` | 1800 |
    | `[write] new lines` | `overlaycopywriter` | `write` | `lines_approved_free` is below the number of posts still to plan, or `lines_suggested` < 6 | `write-<YYYYMMDD-HH>` | 900 |
    | `[gate] plan` | you (`contentdirector`) | `gate` | always | `gate-<YYYYMMDD-HH>` | 900 |
    | `[render] posts` | `videoeditor` | `render` | always | `render-<YYYYMMDD-HH>` | 1800 |

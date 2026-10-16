@@ -57,13 +57,16 @@ if [ "${1:-}" = "off" ] || [ "${1:-}" = "--off" ]; then
   for p in $PROFILES; do [ -d "$(home_of "$p")" ] && hermes_cli profile delete "$p" -y >/dev/null || true; done
   org_edit remove || true
   apply
+  systemctl disable --now studio-worker.path >/dev/null 2>&1 || true
+  rm -f /etc/systemd/system/studio-worker.service /etc/systemd/system/studio-worker.path
+  systemctl daemon-reload
   rm -rf "$TOOLS"
   ok "The content studio is off (its team, its tools and the chief's hand-off skill are removed). Kept $DIR: your clips, lines, sounds and posts."
   exit 0
 fi
 
 step "The content studio (clips, overlay lines and sounds into planned posts you approve)"
-for f in cy cy_cli.py cy_common.py cy_ingest.py cy_plan.py cy_render.py cy_tag.py; do [ -f "$KIT/vm/tools/studio/$f" ] || die "$f is missing in $KIT/vm/tools/studio (update the kit: sudo hermes-update)"; done
+for f in cy cy_cli.py cy_common.py cy_ingest.py cy_plan.py cy_render.py cy_tag.py cy_worker.py; do [ -f "$KIT/vm/tools/studio/$f" ] || die "$f is missing in $KIT/vm/tools/studio (update the kit: sudo hermes-update)"; done
 for p in $PROFILES; do [ -f "$KIT/vm/studio/profiles/$p/SOUL.md" ] && [ -f "$KIT/vm/studio/profiles/$p/config.overlay.yaml" ] || die "profile files for $p are missing in $KIT/vm/studio"; done
 command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null || die "ffmpeg and ffprobe are needed (they come with the kit: sudo hermes-update)"
 [ -x "$HPY" ] || die "the Hermes Python $HPY is missing"
@@ -81,7 +84,7 @@ brief="${STUDIO_BRIEF:-}"
 
 umask 022
 install -d -o hermes -g hermes -m 755 "$DIR" "$TOOLS"
-for d in clips thumbs originals out fonts work; do install -d -o hermes -g hermes -m 755 "$DIR/$d"; done
+for d in clips thumbs originals out fonts work requests; do install -d -o hermes -g hermes -m 755 "$DIR/$d"; done
 [ -f "$DIR/settings.json" ] || printf '{}\n' | install -o hermes -g hermes -m 644 /dev/stdin "$DIR/settings.json"
 as_hermes python3 - "$DIR/settings.json" "$name" "$brief" <<'PY'
 import json, sys
@@ -117,8 +120,11 @@ The Overlay Copywriter reads this every time before writing lines. Edit it in th
 (Leave empty for none. Otherwise: its name, and one or two example pointers, e.g. "the question comes from <the book>".)
 VOICE
 rsync -a --delete --chown=hermes:hermes --chmod=D755,F644 --exclude=tests --exclude=__pycache__ "$KIT/vm/tools/studio/" "$TOOLS/"
-chmod 755 "$TOOLS/cy" "$TOOLS/cy_cli.py"
-ok "Tools in $TOOLS, your data in $DIR"
+chmod 755 "$TOOLS/cy" "$TOOLS/cy_cli.py" "$TOOLS/cy_worker.py"
+install -o root -g root -m 644 "$KIT"/vm/studio/deploy/studio-worker.service "$KIT"/vm/studio/deploy/studio-worker.path /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --quiet --now studio-worker.path
+ok "Tools in $TOOLS, your data in $DIR, the worker waits for the dashboard's requests (studio-worker.path)"
 
 for p in $PROFILES; do
   dir="$(home_of "$p")"

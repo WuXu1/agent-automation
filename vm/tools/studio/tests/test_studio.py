@@ -269,6 +269,20 @@ class Queue(Env):
         self.assertTrue(lib["last_used"] and ln["last_used"] and lib["uses"][0]["post"] == item["id"])
         self.assertNotIn(item["clip"], [c["id"] for c in pl.free_clips()])                    # it rests now
 
+    def test_a_skipped_post_comes_back_unless_something_else_took_its_clip(self):
+        items = pl.plan(seed=1, today=date(2026, 10, 15))["added"]
+        pl.skip(items[0]["id"])
+        pl.attach_render(items[1]["id"], {"out": "out/x.mp4"})
+        self.assertEqual(pl.unskip(items[0]["id"])["status"], "proposed")
+        with self.assertRaises(cy.ToolError) as c:
+            pl.unskip(items[0]["id"])
+        self.assertEqual(c.exception.code, "not_skipped")
+        pl.skip(items[0]["id"])
+        pl.set_item(items[1]["id"], clip=items[0]["clip"])                                      # the freed clip goes to another post
+        with self.assertRaises(cy.ToolError) as c:
+            pl.unskip(items[0]["id"])
+        self.assertEqual(c.exception.code, "held")
+
     def test_unapprove_skip_and_the_status_report(self):
         items = pl.plan(seed=1, today=date(2026, 10, 15))["added"]
         pl.attach_render(items[0]["id"], {"out": "out/x.mp4"})
@@ -332,6 +346,75 @@ class Cli(Env):
         post = self.run_cli("queue")[1]["posts"][0]
         self.assertEqual((post["status"], post["rendered"]), ("ready", True))
         self.assertEqual(self.run_cli("check", post["id"])[0], 0)
+
+
+@unittest.skipUnless(HAVE_FFMPEG, "ffmpeg is needed")
+class Worker(Env):
+    """The service that does the heavy jobs the dashboard asks for."""
+
+    def setUp(self):
+        super().setUp()
+        import cy_worker
+        self.w = cy_worker
+        cy.ensure_dirs()
+        self.no_key = {k: None for k in cy_tag.KEY_NAMES}
+
+    def ask(self, **req):
+        (cy.ROOT / "requests").mkdir(exist_ok=True)
+        (cy.ROOT / "requests" / f"{cy.new_id('r')}.json").write_text(json.dumps(req))
+
+    def test_an_uploaded_clip_is_shrunk_and_a_missing_key_leaves_it_untagged_but_reported(self):
+        import os
+        raw = cy.ROOT / "originals" / "u1.mp4"
+        make_video(raw, 5)
+        self.ask(verb="ingest", file="originals/u1.mp4", name="Mist")
+        saved = {k: os.environ.pop(k, None) for k in cy_tag.KEY_NAMES}
+        self.addCleanup(lambda: [os.environ.__setitem__(k, v) for k, v in saved.items() if v])
+        self.assertEqual(self.w.run(), 0)
+        clips = list(cy.load("library")["clips"].values())
+        self.assertEqual((len(clips), clips[0]["name"], clips[0]["tags"]), (1, "Mist", None))
+        self.assertFalse(raw.exists())
+        st = self.w.read_state()
+        self.assertEqual((st["busy"], st["last"]["ok"], st["failures"][0]["kind"]), (None, True, "tag"))
+        self.assertIn("missing_gemini_key", st["failures"][0]["message"])
+        self.assertEqual(list((cy.ROOT / "requests").glob("*.json")), [])
+
+    def test_a_bad_file_is_reported_and_removed_and_the_queue_goes_on(self):
+        (cy.ROOT / "originals").mkdir(exist_ok=True)
+        (cy.ROOT / "originals" / "bad.mp4").write_bytes(b"junk")
+        self.ask(verb="ingest", file="originals/bad.mp4", name="Bad")
+        self.ask(verb="nonsense")
+        good = cy.ROOT / "originals" / "good.mp4"
+        make_video(good, 4, color="0x203040")
+        self.ask(verb="ingest", file="originals/good.mp4", name="Good")
+        self.w.run()
+        self.assertEqual([c["name"] for c in cy.load("library")["clips"].values()], ["Good"])
+        kinds = [f["kind"] for f in self.w.read_state()["failures"]]
+        self.assertIn("ingest", kinds)
+        self.assertIn("request", kinds)
+        self.assertFalse((cy.ROOT / "originals" / "bad.mp4").exists())
+
+    def test_a_path_outside_the_uploads_folder_is_refused(self):
+        secret = self.tmp / "secret.mp4"
+        make_video(secret, 4)
+        self.ask(verb="ingest", file="../../" + str(secret), name="Sneaky")
+        self.w.run()
+        self.assertEqual(cy.load("library")["clips"], {})
+        self.assertTrue(secret.exists())
+
+    def test_a_render_request_makes_the_post_ready(self):
+        raw = cy.ROOT / "originals" / "r.mp4"
+        make_video(raw, 6)
+        rec = cy_ingest.ingest(raw)
+        lib = cy.load("library")
+        lib["clips"][rec["id"]]["tags"] = {"mood": ["calm"], "scene": [], "calm": 8, "quality": 8, "best_start_s": 0, "text_zone": "center", "text_color": "light"}
+        cy.save("library", lib)
+        pl.add_line("could you let go", [], "approved", "line", "reuben")
+        post = pl.plan(days=0, seed=1)["added"][0]
+        self.ask(verb="render", post=post["id"])
+        self.w.run()
+        self.assertEqual(cy.load("queue")["items"][0]["status"], "ready")
+        self.assertTrue((cy.ROOT / cy.load("queue")["items"][0]["render"]["out"]).is_file())
 
 
 if __name__ == "__main__":

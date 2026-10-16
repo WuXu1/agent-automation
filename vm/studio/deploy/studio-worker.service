@@ -1,0 +1,30 @@
+[Unit]
+Description=Content studio: shrink uploaded clips, have the AI watch them, render planned posts (cy_worker.py, one request at a time)
+# The path unit starts this when a request file is waiting; a flood of requests cannot make it spin.
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
+[Service]
+Type=oneshot
+User=hermes
+Group=hermes
+WorkingDirectory=/data/studio
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# The AI step reads the Clip Curator's own copy of the Gemini key from this file (never printed or logged).
+Environment=STUDIO_ENV_FILES=/data/.hermes/profiles/clipcurator/.env
+ExecStart=/usr/bin/python3 -I /data/tools/studio/cy_worker.py
+TimeoutStartSec=3600
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# A 4K phone clip needs a few hundred MB while it is shrunk; the agents and the memory server keep the rest.
+MemoryHigh=900M
+MemoryMax=1200M

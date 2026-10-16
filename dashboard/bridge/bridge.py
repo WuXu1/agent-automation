@@ -38,6 +38,7 @@ import registry  # noqa: E402
 import review  # noqa: E402
 import jobs  # noqa: E402
 import settings  # noqa: E402
+import studio  # noqa: E402
 import tools  # noqa: E402
 import terminal  # noqa: E402
 
@@ -170,6 +171,7 @@ class App:
         self.allowed = {a.lower() for a in allowed_logins}
         self.paths = paths or feeds.Paths()
         self.env = env or actions.Env(hermes_home=self.paths.hermes_home, gateway_url=self.paths.gateway_url)
+        self.studio = studio.Store(self.paths)
         self.registry_file: Path | None = None          # tests point these at fixtures
         self.systemd_dir: Path | None = None
 
@@ -238,6 +240,9 @@ class App:
                 return self._error(403, "Writes come only from the dashboard page")
             if len(body) > MAX_BODY:
                 return self._error(413, "Too large")
+
+        if route.startswith("/studio/"):
+            return self._studio(method, route, headers, body)
 
         m = re.fullmatch(r"/agents/([a-z][a-z0-9]{0,23})/terminal", route)
         if m and method == "GET":
@@ -550,6 +555,98 @@ class App:
         except actions.ActionError:
             return True
 
+    def _studio(self, method: str, route: str, headers: dict[str, str], body: bytes) -> Response:
+        """The content studio page (studio.py): clips, overlay lines, sounds, the queue and the style. Uploads and file downloads are streamed by stream()."""
+        st, env = self.studio, self.env
+        args = (self._body(body, headers) or {}) if method in ("POST", "PUT", "DELETE") else {}
+        if method in ("POST", "PUT") and self._body(body, headers) is None:
+            return self._error(400, "Send JSON")
+        if route == "/studio/status" and method == "GET":
+            return self._json(200, studio.status(st, env))
+        if route == "/studio/voice" and method == "GET":
+            return self._json(200, studio.get_voice(st))
+        post = {"/studio/plan": lambda: studio.plan_now(st, env), "/studio/propose": lambda: studio.propose(st, env, args), "/studio/style": lambda: studio.set_style(st, env, args),
+                "/studio/settings": lambda: studio.set_settings(st, env, args), "/studio/voice": lambda: studio.set_voice(st, env, args), "/studio/lines": lambda: studio.add_lines(st, env, args),
+                "/studio/sounds": lambda: studio.add_sound(st, env, args), "/studio/failures/clear": lambda: studio.clear_failures(st, env)}
+        if method == "POST" and route in post:
+            return self._json(200, post[route]())
+        m = re.fullmatch(r"/studio/(lines|sounds|clips|queue)/([a-z]_[0-9a-f]{8})", route)
+        if m:
+            kind, ident = m.groups()
+            if method == "POST":
+                fn = {"lines": studio.set_line, "sounds": studio.set_sound, "clips": studio.clip_action, "queue": studio.post_action}[kind]
+                return self._json(200, fn(st, env, ident, args))
+            if method == "DELETE" and kind in ("lines", "sounds", "clips"):
+                fn = {"lines": studio.delete_line, "sounds": studio.delete_sound, "clips": studio.delete_clip}[kind]
+                return self._json(200, fn(st, env, ident))
+        return self._error(404, "Not found")
+
+    def stream(self, h: Any) -> bool:
+        """Clip and font uploads and the studio's files (stills, videos), which do not fit handle()'s bytes-in, bytes-out shape: a clip can be gigabytes. True when this request was one of them."""
+        path, _, query = h.path.partition("?")
+        if not path.startswith("/api/studio/"):
+            return False
+        put = h.command == "PUT"
+        up = re.fullmatch(r"/api/studio/(clips|fonts)/([^/]+)", path) if put else None
+        get = re.fullmatch(r"/api/studio/file/(thumbs|out|clips)/([^/]+)", path) if h.command in ("GET", "HEAD") else None
+        if not (up or get):
+            return False
+        headers = {k.lower(): v for k, v in h.headers.items()}
+        who = self._who(headers)
+        total = int(headers.get("content-length") or 0) if up else 0
+        got = [0]
+
+        def read(n: int) -> bytes:
+            chunk = h.rfile.read(n)
+            got[0] += len(chunk)
+            return chunk
+
+        def drain() -> None:
+            """A refusal before the whole body arrived: take a small rest of it off the wire first, or the browser sees a reset instead of the reason."""
+            left = total - got[0]
+            while 0 < left <= 64 * 1024 * 1024:
+                try:
+                    chunk = h.rfile.read(min(1024 * 1024, left))
+                except OSError:
+                    return
+                if not chunk:
+                    return
+                left -= len(chunk)
+
+        def reply(status: int, hdrs: dict[str, str], payload: bytes) -> None:
+            try:
+                send(h, status, hdrs, payload)
+            except (BrokenPipeError, ConnectionResetError, TimeoutError):          # the browser went away; nothing to tell it
+                h.close_connection = True
+
+        try:
+            if who is None:
+                raise actions.ActionError(401, "Open the dashboard through its Tailscale address (no Tailscale identity on this request)")
+            if who == "":
+                raise actions.ActionError(403, "This Tailscale login is not on the bridge's allow list")
+            if up:
+                if headers.get("x-hermes-dash") != "1":
+                    raise actions.ActionError(403, "Writes come only from the dashboard page")
+                name = urllib.parse.unquote(up.group(2))
+                if up.group(1) == "clips":
+                    result = studio.accept_clip(self.studio, self.env, name, total, read)
+                else:
+                    result = studio.accept_font(self.studio, self.env, name, total, read)
+                reply(*self._json(200, result))
+                return True
+            media, ctype = studio.served_file(self.studio, get.group(1), urllib.parse.unquote(get.group(2)))
+            send_file(h, media, ctype, "private, max-age=300" if media.suffix == ".jpg" else "no-store", download=("download" in urllib.parse.parse_qs(query)))
+        except actions.ActionError as exc:
+            drain()
+            reply(*self._error(exc.status, str(exc)))
+        except (ValueError, TypeError):
+            drain()
+            reply(*self._error(400, "That request is not valid"))
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError) as exc:
+            log.info("studio stream ended early: %s", type(exc).__name__)
+            h.close_connection = True
+        return True
+
     def _static(self, route: str) -> Response:
         rel = route.lstrip("/") or "index.html"
         target = (self.static_dir / rel).resolve()
@@ -574,6 +671,52 @@ SECURITY_HEADERS = {
 }
 
 
+def send(h: Any, status: int, headers: dict[str, str], payload: bytes) -> None:
+    h.send_response(status)
+    for k, v in {**SECURITY_HEADERS, **headers}.items():
+        h.send_header(k, v)
+    h.send_header("Content-Length", str(len(payload)))
+    h.end_headers()
+    if h.command != "HEAD":
+        h.wfile.write(payload)
+
+
+def send_file(h: Any, path: Path, ctype: str, cache: str, download: bool = False) -> None:
+    """A file from disk with Range support (a preview must play and seek in the browser), read in 1 MB pieces."""
+    size = path.stat().st_size
+    rng = studio.parse_range(h.headers.get("Range"), size)
+    if rng is False:
+        h.send_response(416)
+        h.send_header("Content-Range", f"bytes */{size}")
+        h.send_header("Content-Length", "0")
+        h.end_headers()
+        return
+    start, end = rng if rng else (0, size - 1)
+    h.send_response(206 if rng else 200)
+    for k, v in SECURITY_HEADERS.items():
+        h.send_header(k, v)
+    h.send_header("Content-Type", ctype)
+    h.send_header("Accept-Ranges", "bytes")
+    h.send_header("Cache-Control", cache)
+    h.send_header("Content-Length", str(max(0, end - start + 1)) if size else "0")
+    if rng:
+        h.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+    if download:
+        h.send_header("Content-Disposition", 'attachment; filename="' + re.sub(r"[^A-Za-z0-9._ -]", "_", path.name) + '"')
+    h.end_headers()
+    if h.command == "HEAD" or not size:
+        return
+    with open(path, "rb") as f:
+        f.seek(start)
+        left = end - start + 1
+        while left > 0:
+            chunk = f.read(min(1024 * 1024, left))
+            if not chunk:
+                break
+            h.wfile.write(chunk)
+            left -= len(chunk)
+
+
 def make_server(app: App, host: str = "127.0.0.1", port: int = 8890) -> http.server.ThreadingHTTPServer:
     class Handler(http.server.BaseHTTPRequestHandler):
         timeout = 30
@@ -581,6 +724,8 @@ def make_server(app: App, host: str = "127.0.0.1", port: int = 8890) -> http.ser
             return "hermes-dash"
 
         def _serve(self) -> None:
+            if app.stream(self):                                           # uploads and files that can be large are streamed, not read whole
+                return
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY:
                 status, headers, payload = App._json(413, {"error": "Too large"})

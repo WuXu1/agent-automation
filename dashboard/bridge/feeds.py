@@ -33,6 +33,8 @@ class Paths:
     hermes_home: str = "/data/.hermes"
     kanban_db: str = "/data/.hermes/kanban.db"
     gateway_url: str = "http://127.0.0.1:8642"
+    studio_root: str = "/data/studio"           # the content studio's data (vm/studio) and the tools that read and write it
+    studio_tools: str = "/data/tools/studio"
     proc: str = "/proc"
     root: str = "/"
     # Azure for Students starts at $100; the owner types a dated balance in Settings (there is no API for it).
