@@ -57,5 +57,4 @@ see only the brief, and get these rules.
 
 ## Coursework
 
-Explain and give feedback only. Never write text, code or answers {{OWNER}} would submit for
-assessment. {{COURSE_AI_AGENTS}}
+{{COURSEWORK_AGENTS}} {{COURSE_AI_AGENTS}}

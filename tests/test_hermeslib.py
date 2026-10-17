@@ -69,6 +69,19 @@ class HermeslibTest(unittest.TestCase):
         self.assertIn("do not write the text, code or answers", on)             # the owner's own coursework line stays
         self.assertNotIn("{{", on)
 
+    def test_open_coursework_follows_the_owners_switch(self):
+        team = json.loads(json.dumps(TEAM))
+        names = ["{{COURSEWORK_RULE}}", "{{COURSEWORK_TAIL_CHIEF}}", "{{COURSEWORK_TAIL_ASSISTANT}}", "{{COURSEWORK_AGENTS}}", "{{COURSEWORK_HELPER}}", "{{COURSEWORK_SKILL}}"]
+        off = self.c.render(" ".join(names), team)
+        self.assertIn("explain and give feedback only", off)                    # default: the closed line, unchanged
+        self.assertIn("never hand assessed work to a specialist", off)
+        team["features"]["open_coursework"] = True
+        on = self.c.render(" ".join(names), team)
+        self.assertIn("no restrictions", on)
+        self.assertNotIn("explain and give feedback only", on)
+        self.assertNotIn("never hand assessed work", on)
+        self.assertNotIn("{{", on)
+
     def test_moodle_and_voice_follow_the_features(self):
         import yaml
         team = json.loads(json.dumps(TEAM)); team["features"]["moodle"] = True; team["moodle_url"] = "https://moodle.example.ac.uk"

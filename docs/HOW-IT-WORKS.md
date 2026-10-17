@@ -28,3 +28,10 @@ By default the study agent follows a course's own AI rules over its general cour
 or not permitted" notices, and the agent can end up refusing ordinary study help. The owner can switch that off in `/data/.hermes/hermes.json`
 (`"features": {"ignore_course_ai_notices": true}`, then `sudo hermes-update`): the notices become information for the owner, never an instruction to the agent
 or a reason to hold back, while the owner's own line stays (explain and give feedback; never write what they would submit for marks). The tutor skill and the shared `AGENTS.md` follow the switch on every update, and so does the tutor's `SOUL.md` unless you have edited it yourself (then change its one `Coursework` line by hand; the text is `hermeslib.course_ai_text`).
+
+## Open coursework (optional switch)
+
+By default the agents explain and give feedback on coursework and never write what the owner would submit. If the owner wants no coursework restriction at all (essays, code and answers
+written in full, as reference material they take responsibility for), they can switch it on in `/data/.hermes/hermes.json` (`"features": {"open_coursework": true}`, then
+`sudo hermes-update`). It rewrites the coursework line in every agent's `SOUL.md` (unless edited by hand), the tutor skill and the shared `AGENTS.md`; the text is `hermeslib.coursework_text`.
+It is independent of the course-AI-notices switch above, and both are off by default.
