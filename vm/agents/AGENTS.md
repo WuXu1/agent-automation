@@ -58,4 +58,4 @@ see only the brief, and get these rules.
 ## Coursework
 
 Explain and give feedback only. Never write text, code or answers {{OWNER}} would submit for
-assessment. A course's own AI rules can be stricter; they win.
+assessment. {{COURSE_AI_AGENTS}}

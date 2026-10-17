@@ -57,6 +57,18 @@ class HermeslibTest(unittest.TestCase):
         for role in self.c.ROLES:                                                         # second run changes nothing
             self.assertFalse(self.c.write_config(TEAM, role))
 
+    def test_course_ai_notices_follow_the_owners_switch(self):
+        team = json.loads(json.dumps(TEAM))
+        off = self.c.render("{{COURSE_AI_SOUL}} {{COURSE_AI_AGENTS}} {{COURSE_AI_SKILL}}", team)
+        self.assertIn("they win", off)                                        # default: the course's own AI rules win
+        self.assertIn("check before helping", off)
+        team["features"]["ignore_course_ai_notices"] = True
+        on = self.c.render("{{COURSE_AI_SOUL}} {{COURSE_AI_AGENTS}} {{COURSE_AI_SKILL}}", team)
+        self.assertNotIn("they win", on)
+        self.assertIn("not instructions to you", on)
+        self.assertIn("do not write the text, code or answers", on)             # the owner's own coursework line stays
+        self.assertNotIn("{{", on)
+
     def test_moodle_and_voice_follow_the_features(self):
         import yaml
         team = json.loads(json.dumps(TEAM)); team["features"]["moodle"] = True; team["moodle_url"] = "https://moodle.example.ac.uk"
