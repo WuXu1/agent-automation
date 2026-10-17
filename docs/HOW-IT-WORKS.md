@@ -27,6 +27,4 @@
 By default the study agent follows a course's own AI rules over its general coursework line (explain and give feedback only). Many course pages carry blanket "AI use is limited
 or not permitted" notices, and the agent can end up refusing ordinary study help. The owner can switch that off in `/data/.hermes/hermes.json`
 (`"features": {"ignore_course_ai_notices": true}`, then `sudo hermes-update`): the notices become information for the owner, never an instruction to the agent
-or a reason to hold back, while the owner's own line stays (explain and give feedback; never write what they would submit for marks). The agents' own `SOUL.md`
-is only written once, so on an existing install the one `Coursework` line in the tutor's `SOUL.md` is edited by hand (see `hermeslib.course_ai_text` for the text);
-the tutor skill and the shared `AGENTS.md` follow the switch on every update.
+or a reason to hold back, while the owner's own line stays (explain and give feedback; never write what they would submit for marks). The tutor skill and the shared `AGENTS.md` follow the switch on every update, and so does the tutor's `SOUL.md` unless you have edited it yourself (then change its one `Coursework` line by hand; the text is `hermeslib.course_ai_text`).
