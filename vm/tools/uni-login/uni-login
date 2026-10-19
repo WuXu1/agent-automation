@@ -2,6 +2,7 @@
 # uni-login: the agents sign in to the university for you (docs/UNI-LOGIN.md).
 #   sudo uni-login setup     type the university email, password and authenticator secret (hidden), then a test sign-in
 #   sudo uni-login refresh   sign in now and give the agents the new Moodle cookie (the keep-alive asks for this by itself)
+#   sudo uni-login code      the 6-digit code the server would use now: it should equal your phone app's code
 #   uni-login request        ask for a renewal (what the keep-alive does when the session has ended)
 #   uni-login status         is it set up, and how did the last sign-in go (no secrets)
 #   sudo uni-login off       forget the password and the secret
@@ -90,13 +91,18 @@ case "${1:-}" in
     if printf '%s\n%s\n%s\n' "$email" "$pw" "$secret" | as_login save; then
       pw=""; secret=""
       touch "$STATE/configured"; chmod 644 "$STATE/configured"
-      read -r -p "Does that code match your phone app? Press Enter to try a real sign-in now (Ctrl-C to stop): " _ </dev/tty
+      echo "(That code only matters if it equalled your phone's at that moment. To check again any time: sudo uni-login code)"
+      read -r -p "Press Enter to try a real sign-in now (Ctrl-C to stop): " _ </dev/tty
       refresh --force
       [ "$(sed 's/ .*//' "$STATE/status")" = ok ] && echo "All set: the agents can use your university login." || {
         echo "That sign-in didn't work: $(cat "$STATE/status"). Nothing is broken; the old cookie still works until it ends." >&2
         echo "Ask Claude to look at it (the reason above is safe to share)." >&2; }
     else pw=""; secret=""; exit 1; fi ;;
   refresh) shift; refresh "$@" ;;
+  code)   # the code the server would send right now, to compare with the phone app (it changes every 30 seconds)
+    need_root
+    [ -f "$STATE/configured" ] || { echo "Not set up. Run: sudo uni-login setup" >&2; exit 1; }
+    as_login totp ;;
   request) touch "$RUNDIR/request" 2>/dev/null && echo "Renewal requested." || { echo "Can't write $RUNDIR/request" >&2; exit 1; } ;;
   state)   # for scripts: <configured|none> <ok|failed|running|never> <epoch> <reason>
     if [ -f "$STATE/configured" ]; then c=configured; else c=none; fi
@@ -112,5 +118,5 @@ case "${1:-}" in
     systemctl disable --now uni-login-refresh.path >/dev/null 2>&1 || true
     rm -rf "${PRIV:?}"/* "$STATE/configured" "$STATE/status"
     echo "Forgotten: the password and the secret are deleted. The agents keep their current Moodle cookie until it ends." ;;
-  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

@@ -344,7 +344,7 @@ def main(argv):
         return cmd_save()
     if cmd == "totp":
         creds = load_json(CREDS_FILE)
-        print(totp(creds["totp_secret"]) if creds else "not set up")
+        print(("%s  (changes in %d s)" % (totp(creds["totp_secret"]), seconds_left())) if creds else "not set up")
         return 0 if creds else 1
     if cmd == "login":
         return cmd_login(force="--force" in argv)
