@@ -2,6 +2,7 @@
 # The chief can be rung, and can ring you (docs/PHONE.md). Called by `sudo hermes-addon phone`.
 #   sudo hermes-addon phone           set it up (safe to run again: it only fills in what is missing)
 #   sudo hermes-addon phone number    give the phone agent a Twilio number (the Twilio login is typed once and not stored)
+#   sudo hermes-addon phone voice     choose a different voice for the chief (changes the ElevenLabs agents too)
 #   sudo hermes-addon phone update    copy the newest desk code in and restart it quietly (hermes-update does this by itself)
 #   sudo hermes-addon phone off       switch it off (the code and the settings stay)
 # Money: ElevenLabs minutes (they come out of the ElevenLabs plan), a Twilio number and its per-minute calls.
@@ -31,7 +32,31 @@ quiet_restart() {   # restart the desk only when no call is going on
   if [ "$n" = 0 ]; then systemctl restart voice-desk; else warn "A call is in progress: restart later with: sudo systemctl restart voice-desk"; fi
 }
 
+pick_voice() {   # asks which ElevenLabs voice the chief speaks with; saves it in the setup file
+  local key voices pick vid
+  key="$(env_get "$(env_of chief)" ELEVENLABS_API_KEY)"
+  voices="$(curl_body "url = \"https://api.elevenlabs.io/v1/voices\"
+header = \"xi-api-key: $key\"" | jq -r '.voices[] | [.voice_id, .name, ((.labels // {}) | [.gender, .accent, .description] | map(select(. != null)) | join(", "))] | @tsv')"
+  [ -n "$voices" ] || die "Couldn't list your ElevenLabs voices."
+  say "  Pick $chief's voice (add voices from ElevenLabs' Voice Library first if none suits):"
+  printf '%s\n' "$voices" | awk -F'\t' '{printf "   %2d) %-18s %s\n", NR, $2, $3}'
+  while :; do
+    pick="$(ask "Voice for $chief (number)" "1")"
+    vid="$(printf '%s\n' "$voices" | sed -n "${pick}p" | cut -f1)"
+    printf '%s' "$vid" | grep -Eq '^[A-Za-z0-9]{10,40}$' && break
+    warn "Pick a number from the list."
+  done
+  cj_set '.voices.chief' "$(jstr "$vid")"
+}
+
 case "$mode" in
+  voice)
+    [ "$(cj .features.phone)" = true ] || die "Set the phone line up first: sudo hermes-addon phone"
+    env_has "$(env_of chief)" ELEVENLABS_API_KEY || die "ElevenLabs first: sudo hermes-key elevenlabs"
+    pick_voice
+    as_hermes python3 -c "import sys; sys.path.insert(0, '$DEST'); from desk import config; config.update_config_json('$STATE', {'voice_id': '$(cj .voices.chief)'})"
+    in_desk python3 -m desk.push_agent --state-dir "$STATE" --agents-dir "$DEST/agents" --style "$DEST/STYLE.md" || die "Updating the ElevenLabs agents failed (above)."
+    quiet_restart; ok "$chief now speaks with the new voice."; exit 0 ;;
   off)
     systemctl disable --now voice-desk >/dev/null 2>&1 || true
     tailscale funnel --https=8443 off >/dev/null 2>&1 || true
@@ -52,7 +77,7 @@ case "$mode" in
     sid=""; tok=""; quiet_restart
     ok "Done: ring that number and $chief answers. To try a call out: sudo -u hermes python3 -m desk.admin test-call (see docs/PHONE.md)"; exit 0 ;;
   setup) ;;
-  *) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
 
 step "Phone line for $chief"
@@ -67,21 +92,9 @@ key="$(env_get "$ek" ELEVENLABS_API_KEY)"
 command -v tailscale >/dev/null || die "Tailscale isn't installed on this server."
 
 # 1. a voice for the chief
+env_has "$ek" ELEVENLABS_API_KEY || true
 voice="$(cj .voices.chief)"
-if [ -z "$voice" ]; then
-  voices="$(curl_body "url = \"https://api.elevenlabs.io/v1/voices\"
-header = \"xi-api-key: $key\"" | jq -r '.voices[] | [.voice_id, .name, ((.labels // {}) | [.gender, .accent, .description] | map(select(. != null)) | join(", "))] | @tsv')"
-  [ -n "$voices" ] || die "Couldn't list your ElevenLabs voices."
-  say "  Pick $chief's voice (add voices from ElevenLabs' Voice Library first if none suits):"
-  printf '%s\n' "$voices" | awk -F'\t' '{printf "   %2d) %-18s %s\n", NR, $2, $3}'
-  while :; do
-    pick="$(ask "Voice for $chief (number)" "1")"
-    voice="$(printf '%s\n' "$voices" | sed -n "${pick}p" | cut -f1)"
-    printf '%s' "$voice" | grep -Eq '^[A-Za-z0-9]{10,40}$' && break
-    warn "Pick a number from the list."
-  done
-  cj_set '.voices.chief' "$(jstr "$voice")"
-fi
+[ -n "$voice" ] || { pick_voice; voice="$(cj .voices.chief)"; }
 key=""
 
 # 2. the code, the folder for its settings and secrets

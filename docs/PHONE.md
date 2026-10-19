@@ -35,7 +35,8 @@ spoken yes each time, it can also ring people from a small contact book.
 
 ## Commands (as the hermes user, in `/data/tools/voice-desk`)
 `python3 -m desk.admin status`, `self-check`, `ask tutor|assistant|coach QUESTION`, `contact list`, `notify-test`,
-`dial-mode live|dry`, `notify-mode live|dry`. `sudo hermes-addon phone update` copies the newest desk code in and restarts it
+`dial-mode live|dry`, `notify-mode live|dry`. `sudo hermes-addon phone voice` picks a different voice for the chief (and updates its
+ElevenLabs agents). `sudo hermes-addon phone update` copies the newest desk code in and restarts it
 quietly (`sudo hermes-update` does it by itself). `sudo hermes-addon phone off` switches the desk off.
 
 ## Good to know
