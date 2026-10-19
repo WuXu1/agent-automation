@@ -54,8 +54,11 @@ mark_stage() { mkdir -p "$STAMP_DIR"; date -u +%FT%TZ > "$STAMP_DIR/$1"; }
 _passenv() { local v; for v in HTTPS_PROXY HTTP_PROXY NO_PROXY https_proxy http_proxy no_proxy SSL_CERT_FILE REQUESTS_CA_BUNDLE PIP_CERT UV_NATIVE_TLS; do
   [ -n "${!v:-}" ] && printf '%s=%s\n' "$v" "${!v}"; done; }
 # shellcheck disable=SC2046  # one KEY=value per line, split on newlines on purpose
-as_hermes() { local IFS=$'\n'; sudo -u hermes -H env $(_passenv) HERMES_HOME=$HH PATH=/home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin "$@"; }
-hermes_cli() { as_hermes /home/hermes/.local/bin/hermes "$@" </dev/null; }
+as_hermes() { local pre=() IFS=$'\n'; [ -z "${AS_HERMES_DETACHED:-}" ] || pre=(setsid -w)
+  "${pre[@]}" sudo -u hermes -H env $(_passenv) HERMES_HOME=$HH PATH=/home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin "$@"; }
+# Hermes commands run from here never ask anything: detached from the terminal as well as stdin from /dev/null, because a plugin's
+# optional-key prompt (getpass) reads /dev/tty and would otherwise wait for ever when the installer runs over `ssh -t`.
+hermes_cli() { AS_HERMES_DETACHED=1 as_hermes /home/hermes/.local/bin/hermes "$@" </dev/null; }
 
 profile_of() { case "$1" in chief) echo default ;; *) echo "$1" ;; esac; }
 home_of()    { [ "$1" = default ] && echo "$HH" || echo "$HH/profiles/$1"; }

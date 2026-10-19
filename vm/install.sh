@@ -4,6 +4,7 @@
 #     sudo bash /opt/agent-automation/vm/install.sh --redo X   (run one stage again: system questions hermes keys agents memory gateway jobs dashboard)
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "run it with sudo" >&2; exit 1; }
+cd /   # the agents' user can't read the admin's home folder (mode 750), and tools like uv look for config files in the working directory
 . /opt/agent-automation/vm/lib.sh
 for f in "$KIT"/vm/stages/*.sh; do . "$f"; done
 umask 022
