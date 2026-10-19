@@ -90,7 +90,10 @@ class FakeUniversity(http.server.BaseHTTPRequestHandler):
             if "loginfmt" in form:
                 cls.log.append("email=" + form["loginfmt"])
                 return self.redirect("/ms/password")
-            return self.send('<form method=post action=/ms/email><input name=loginfmt type=email></form>')
+            # Microsoft keeps the password box in the email page too, parked off-screen: it must not be taken for the password step
+            return self.send('<form method=post action=/ms/email><input name=loginfmt type=email>'
+                             '<input name=passwd type=password style="position:absolute;left:-10000px">'
+                             '<input type=submit id=idSIButton9 value=Next></form>')
         if path == "/ms/password":
             return self.send('<form method=post action=/ms/check><input name=passwd type=password></form>')
         if path == "/ms/check":
@@ -171,6 +174,7 @@ class SignInWalkTest(unittest.TestCase):
         self.assertEqual((code, out), (0, COOKIE), err)
         self.assertTrue(last["ok"])
         self.assertIn("email=" + self.creds["email"], FakeUniversity.log)
+        self.assertEqual(FakeUniversity.log.count("/ms/check"), 1)
 
     def test_push_prompt_then_another_way(self):
         code, out, err, _ = self.run_login("push")

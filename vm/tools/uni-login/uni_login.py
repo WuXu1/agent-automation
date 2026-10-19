@@ -99,10 +99,18 @@ LIMITS = {"continue": 3, "chooser": 2, "email": 2, "password": 1, "otc": 2, "ano
 SETTLE_SECONDS = 8
 
 
+# "Visible" means really on screen and not faded out. Playwright's own check also counts an input parked off-screen, and
+# Microsoft's email page has exactly that: a password box at left:-10000px.
+ON_SCREEN = """els => els.some(el => {
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight &&
+         (!el.checkVisibility || el.checkVisibility({checkOpacity: true, checkVisibilityCSS: true}));
+})"""
+
+
 def visible(page, selector):
     try:
-        loc = page.locator(selector).first
-        return loc.count() > 0 and loc.is_visible()
+        return bool(page.locator(selector).evaluate_all(ON_SCREEN))
     except Exception:
         return False
 
