@@ -1,5 +1,13 @@
 # agent-automation: instructions for Claude Code
 
+## What this repo is (Max, 19 Oct 2026)
+**An install script that lays the foundation once. Nothing more.** It is not a product: no ongoing updates, no add-ons, no feature switches that reach servers
+after the install. A server installed from it is **detached** afterwards and grows by hand, the way Max's own setup grew: a tool in `/data/tools`, one skill per
+agent, a hidden-prompt script for secrets, recorded in the owner's own repo. Logan's and Reuben's servers are detached (`hermes-update` and `hermes-addon` were removed
+from them on 19 Oct 2026). **Do not add features, add-ons or update paths to this repo, and do not run `hermes-update` or `hermes-addon` on a server.** Fix an install
+problem here only if it breaks the first install. The older pieces below (add-ons, the update command) stay in the repo for anyone installing fresh, but are not how
+Max's friends' servers are changed any more.
+
 This repo installs four Hermes Agent agents (Chief of Staff, Tutor, Assistant, Coach) on the owner's Azure for
 Students VM, chatting on Telegram, with shared Mem0 memory and a private dashboard. The person you're helping is usually a
 student who is new to servers and AI agents: plain words, one step at a time, and the money impact of anything you suggest.
