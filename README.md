@@ -79,6 +79,7 @@ Talk to your agents on Telegram. Send a voice note and they understand it; typin
 | `hermes addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
 | `hermes addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
 | `hermes addon moodle-login` | The server signs in to the university for you (password + authenticator code, kept locked away) so you never paste a cookie again: [docs/UNI-LOGIN.md](docs/UNI-LOGIN.md) |
+| `hermes addon phone` | Your Chief of Staff gets a phone number: you ring it, it rings you back with results ([docs/PHONE.md](docs/PHONE.md); needs ElevenLabs and Twilio) |
 | `hermes desktop` | **The Hermes app on your Mac** (Mac only), already connected to your server. It builds just the app, nothing of Hermes runs on the Mac. Needs Tailscale on and about 10 minutes the first time |
 | `hermes addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
 

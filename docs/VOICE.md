@@ -14,4 +14,4 @@
   listen to and use fewer ElevenLabs characters.
 - Change voices: run `hermes voice` again. Switch off: `hermes voice off`.
 
-**Phone calls** (ringing your agents, or them ringing you) aren't in this kit yet.
+**Phone calls** (ringing your Chief of Staff, or it ringing you) are an add-on: `sudo hermes-addon phone` ([docs/PHONE.md](PHONE.md)).

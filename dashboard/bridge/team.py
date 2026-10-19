@@ -24,7 +24,7 @@ FILE = "hermes.json"
 AGENT_ID_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
 OWNER_ID_RE = re.compile(r"^[a-z0-9]{1,32}$")
 PROFILE_RE = re.compile(r"^[a-z][a-z0-9]{0,23}$")
-FEATURES = ("voice", "gmail", "moodle", "icloud", "backup", "studio")
+FEATURES = ("voice", "gmail", "moodle", "icloud", "backup", "studio", "phone")
 ROLES = ("chief", "tutor", "assistant", "coach")
 
 FALLBACK: dict[str, Any] = {

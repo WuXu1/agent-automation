@@ -1,0 +1,23 @@
+[Unit]
+Description=Phone line desk for the chief of staff (call tools, call-backs, brief, minutes guard)
+After=network-online.target hermes-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/data/tools/voice-desk
+Environment=HOME=/home/hermes
+Environment=HERMES_HOME=/data/.hermes
+Environment=TZ=Europe/London
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 -m desk.server
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

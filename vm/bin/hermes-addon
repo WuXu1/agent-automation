@@ -3,6 +3,7 @@
 #   sudo hermes-addon gmail      the chief and assistant can read your Gmail and write drafts (never send, delete or move)
 #   sudo hermes-addon moodle     the tutor and assistant can read your university's Moodle (deadlines, courses, grades; never submit)
 #   sudo hermes-addon moodle-login   the agents sign in to the university themselves (password + authenticator code kept on the server, docs/UNI-LOGIN.md)
+#   sudo hermes-addon phone          your chief answers a phone number and can ring you (docs/PHONE.md; needs ElevenLabs and Twilio)
 #   sudo hermes-addon backup     nightly encrypted backup to your Google Drive (docs/BACKUPS.md)
 #   sudo hermes-addon studio     a content team for a video page: clips, overlay lines and sounds into planned posts you approve (vm/studio)
 #   sudo hermes-addon <name> off switch one off again
@@ -86,6 +87,10 @@ case "$what" in
     sed "s|@URL@|$(cj .moodle_url)|" "$KIT/vm/tools/moodle/moodle-keepalive.sh" | install -o hermes -g hermes -m 755 /dev/stdin "$sd/moodle-keepalive.sh"
     exec /usr/local/bin/uni-login setup ;;
 
+  phone)
+    [ -x "$KIT/vm/phone/install.sh" ] || die "The phone line isn't in this copy of the kit; update it: sudo hermes-update"
+    exec bash "$KIT/vm/phone/install.sh" "${off:-setup}" ;;
+
   backup)
     [ -x "$KIT/vm/backup/hermes-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (hermes update)."
     exec bash "$KIT/vm/backup/hermes-addon-backup" ${off:+--off} ;;
@@ -94,5 +99,5 @@ case "$what" in
     [ -x "$KIT/vm/studio/install.sh" ] || die "The content studio isn't in this copy of the kit; update it: sudo hermes-update"
     exec bash "$KIT/vm/studio/install.sh" ${off:+off} ;;
 
-  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

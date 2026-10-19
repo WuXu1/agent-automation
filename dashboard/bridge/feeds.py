@@ -22,7 +22,7 @@ from typing import Any, Iterator
 
 import team
 
-SERVICES = ["hermes-gateway", "mem0-server", "postgresql", "hermes-dash", "tailscaled"]
+SERVICES = ["hermes-gateway", "mem0-server", "postgresql", "hermes-dash", "tailscaled", "voice-desk"]
 CLEANABLE = ["/data/.hermes/installs", "/data/.hermes/tools", "/data/backups"]
 OWNER = "owner"            # the person the team works for, on the board and in hand-offs (the page shows their name)
 DAY = 86_400

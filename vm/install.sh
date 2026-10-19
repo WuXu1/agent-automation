@@ -36,6 +36,7 @@ run memory once
 run gateway always
 run jobs once
 run dashboard always
+[ "$(cj .features.phone)" = true ] && [ -x "$KIT/vm/phone/install.sh" ] && { bash "$KIT/vm/phone/install.sh" update || warn "couldn't update the phone desk"; }
 
 step "Checking everything"
 /usr/local/bin/hermes-doctor || true
