@@ -107,12 +107,22 @@ sync_local_kit() {
   chmod 755 "$STATE_DIR/bin/hermes"
 }
 
-# Make `hermes status` work from any terminal: one PATH line in the shell's startup file (asked first by the caller).
+# Make `hermes status` work from any terminal: one PATH line in the shell's startup file (asked first by the caller). Prints the file it used;
+# fails when no startup file can be written (some are owned by root after other installers).
 add_hermes_to_path() {
-  local rc line
-  case "$(basename "${SHELL:-}")" in zsh) rc="$HOME/.zshrc" ;; bash) if [ "$(os_kind)" = mac ]; then rc="$HOME/.bash_profile"; else rc="$HOME/.bashrc"; fi ;; *) rc="" ;; esac
-  [ -n "$rc" ] || return 1
+  local line rc candidates=""
+  case "$(basename "${SHELL:-}")" in
+    zsh)  candidates="$HOME/.zshrc $HOME/.zprofile" ;;
+    bash) if [ "$(os_kind)" = mac ]; then candidates="$HOME/.bash_profile $HOME/.profile"; else candidates="$HOME/.bashrc $HOME/.profile"; fi ;;
+  esac
   line='export PATH="$HOME/.agent-automation/bin:$PATH"   # agent-automation: the `hermes` command'
-  grep -qF '.agent-automation/bin' "$rc" 2>/dev/null || printf '\n%s\n' "$line" >> "$rc"
-  printf '%s' "$rc"
+  for rc in $candidates; do
+    if grep -qF '.agent-automation/bin' "$rc" 2>/dev/null; then printf '%s' "$rc"; return 0; fi
+  done
+  for rc in $candidates; do
+    if { [ -e "$rc" ] && [ -w "$rc" ]; } || { [ ! -e "$rc" ] && [ -w "$(dirname "$rc")" ]; }; then
+      printf '\n%s\n' "$line" >> "$rc" 2>/dev/null && { printf '%s' "$rc"; return 0; }
+    fi
+  done
+  return 1
 }

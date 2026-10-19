@@ -58,6 +58,24 @@ class LocalKitTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((home / ".zshrc").read_text().count(".agent-automation/bin"), 1)
 
+    def test_a_startup_file_owned_by_someone_else_is_skipped(self):
+        home = Path(tempfile.mkdtemp())
+        (home / ".zshrc").write_text("# not ours\n")
+        (home / ".zshrc").chmod(0o444)
+        r = bash(f'. "{ROOT}/laptop/lib.sh"; add_hermes_to_path', home)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout, str(home / ".zprofile"))
+        self.assertNotIn(".agent-automation", (home / ".zshrc").read_text())
+        self.assertEqual((home / ".zprofile").read_text().count(".agent-automation/bin"), 1)
+
+    def test_no_writable_startup_file_is_a_failure_not_a_false_success(self):
+        home = Path(tempfile.mkdtemp())
+        for f in (".zshrc", ".zprofile"):
+            (home / f).write_text("x\n")
+            (home / f).chmod(0o444)
+        r = bash(f'. "{ROOT}/laptop/lib.sh"; add_hermes_to_path', home)
+        self.assertNotEqual(r.returncode, 0)
+
     def test_hermes_cli_never_waits_on_a_terminal(self):
         text = (ROOT / "vm" / "lib.sh").read_text()
         self.assertIn("setsid", text)
