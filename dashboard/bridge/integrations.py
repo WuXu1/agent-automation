@@ -174,6 +174,21 @@ def check_all(env: Env, balances: Callable[[Env], dict], checks: dict[str, Calla
 
 # -- the hub (the bridge) ----------------------------------------------------------------------------------------------------
 
+UNI_LOGIN_DIR = Path("/var/lib/uni-login")          # `uni-login` keeps a one-line, secret-free status here (docs/UNI-LOGIN.md)
+
+
+def _uni_login() -> dict:
+    """Whether the university sign-in helper is set up and how its last sign-in went (never any secret)."""
+    parts = []
+    try:
+        parts = (UNI_LOGIN_DIR / "status").read_text().split()
+    except OSError:
+        pass
+    at = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    return {"configured": (UNI_LOGIN_DIR / "configured").exists(), "result": parts[0] if parts and at else "never",
+            "at": at, "reason": parts[2] if len(parts) > 2 else ""}
+
+
 def _status(ok: bool | None, warn: bool = False) -> str:
     return "unknown" if ok is None else "attention" if not ok else "expiring" if warn else "connected"
 
@@ -183,11 +198,20 @@ def _builtin(env: Env, c: dict, cron_jobs: list[dict], backup: dict, now: int) -
     b = c.get("balances") or {}
     out: dict[str, dict] = {}
 
-    keep = next((j for j in cron_jobs if j.get("profile") == "default" and "moodle" in (j.get("name") or "").lower()), None)
-    renewed = _mtime(secrets_dir(env) / "moodle.env")
+    keep = next((j for j in cron_jobs if "moodle" in (j.get("name") or "").lower()), None)      # the kit runs it on the tutor
+    uni = _uni_login()
+    renewed = (uni["at"] * 1000 if uni["result"] == "ok" else None) or _mtime(secrets_dir(env) / "moodle.env") \
+        or _mtime(env.profile_dir("tutor") / ".env")
     out["moodle"] = {"status": _status(None if not keep else keep.get("lastStatus") == "ok"),
                      "facts": [f"cookie renewed {_days(renewed, now)}" if renewed else "cookie file not found",
                                f"keep-alive {keep.get('lastStatus')} {_ago(keep.get('lastAt'), now)}" if keep else "no keep-alive job"]}
+
+    out["uni-login"] = {"status": {"ok": "connected", "failed": "attention"}.get(uni["result"], "unknown"),
+                        "facts": [{"ok": f"last sign-in worked {_ago(uni['at'] * 1000, now)}",
+                                   "failed": f"last sign-in failed ({uni['reason'] or 'unknown'}) {_ago(uni['at'] * 1000, now)}",
+                                   "running": "signing in now"}.get(uni["result"],
+                                  "set up, no sign-in yet" if uni["configured"] else "not set up: sudo hermes-addon moodle-login"),
+                                  "renews the Moodle cookie by itself when the session ends" if uni["configured"] else ""]}
 
     g = c.get("gmail") or {}
     out["gmail"] = {"status": _status(g.get("ok")) if g else "unknown",

@@ -4,21 +4,40 @@ import { rng } from '@/lib/rng'
 
 let glowTexture: THREE.Texture | null = null
 
-/** A soft round glow (made once on a canvas), for the galaxy's core and each theme's nebula. */
+/** A soft round glow (computed once), for the galaxy's core and each theme's nebula.
+ *
+ * Built as raw pixels, not drawn on a canvas: a canvas stores colour premultiplied by its alpha in 8 bits, so where the glow fades out
+ * (alpha near zero) the colour channels come back coarse and tinted, and an iPhone's GPU showed that as black, blue and green
+ * speckle across the haze. Here every pixel is plain white and only the alpha fades, with a hair of noise so it does not band. */
 export function glow(): THREE.Texture {
   if (glowTexture) return glowTexture
-  const c = document.createElement('canvas')
-  c.width = c.height = 128
-  const g = c.getContext('2d')!
-  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64)
-  grad.addColorStop(0, 'rgba(255,255,255,1)')
-  grad.addColorStop(0.25, 'rgba(255,255,255,0.45)')
-  grad.addColorStop(0.6, 'rgba(255,255,255,0.1)')
-  grad.addColorStop(1, 'rgba(255,255,255,0)')
-  g.fillStyle = grad
-  g.fillRect(0, 0, 128, 128)
-  glowTexture = new THREE.CanvasTexture(c)
-  return glowTexture
+  const N = 128
+  const data = new Uint8Array(N * N * 4)
+  const stops: [number, number][] = [[0, 1], [0.25, 0.45], [0.6, 0.1], [1, 0]]
+  const alphaAt = (r: number) => {
+    for (let k = 1; k < stops.length; k++) {
+      const [r1, a1] = stops[k]!
+      if (r <= r1) { const [r0, a0] = stops[k - 1]!; return a0 + ((a1 - a0) * (r - r0)) / (r1 - r0) }
+    }
+    return 0
+  }
+  const noise = rng(5)
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const r = Math.hypot(x + 0.5 - N / 2, y + 0.5 - N / 2) / (N / 2)
+      const a = r >= 1 ? 0 : alphaAt(r) * 255 + (noise() - 0.5)
+      const o = (y * N + x) * 4
+      data[o] = data[o + 1] = data[o + 2] = 255
+      data[o + 3] = Math.max(0, Math.min(255, Math.round(a)))
+    }
+  }
+  const t = new THREE.DataTexture(data, N, N, THREE.RGBAFormat)
+  t.magFilter = THREE.LinearFilter
+  t.minFilter = THREE.LinearFilter
+  t.generateMipmaps = false
+  t.needsUpdate = true
+  glowTexture = t
+  return t
 }
 
 /** Far stars, a faint galactic glow at the centre, and the celestial grid (the spec's grid overlay, drawn as the dome's

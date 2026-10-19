@@ -104,6 +104,36 @@ class ExpansionTest(unittest.TestCase):
         self.assertEqual(feeds.agent_runs(self.paths, "nobody", NOW)["runs"], [])
 
     # integrations
+    def test_moodle_and_signin_cards_on_a_kit_server(self):
+        """Kit servers keep the cookie in the tutor's .env and run the keep-alive on the tutor; the sign-in helper reports through
+        its secret-free status file. (The card once said "cookie file not found" and showed no sign-in card at all.)"""
+        import tempfile
+        d = Path(tempfile.mkdtemp())
+        (self.home / "profiles" / "tutor").mkdir(parents=True, exist_ok=True)
+        (self.home / "profiles" / "tutor" / ".env").write_text("MOODLE_TOKEN=x\n")
+        now = int(time.time() * 1000)
+        jobs = [{"profile": "tutor", "name": "Moodle keep-alive", "lastStatus": "ok", "lastAt": now - 600_000}]
+        orig = integrations.UNI_LOGIN_DIR
+        try:
+            integrations.UNI_LOGIN_DIR = d
+            by = {c["id"]: c for c in integrations.hub(self.env, jobs, {})["cards"]}
+            self.assertEqual(by["moodle"]["status"], "connected")
+            self.assertNotIn("cookie file not found", by["moodle"]["facts"])
+            self.assertEqual(by["uni-login"]["status"], "unknown")                       # not set up yet
+            self.assertIn("not set up", by["uni-login"]["facts"][0])
+            (d / "configured").write_text("")
+            (d / "status").write_text("ok %d\n" % (now // 1000 - 7200))
+            by = {c["id"]: c for c in integrations.hub(self.env, jobs, {})["cards"]}
+            self.assertEqual(by["uni-login"]["status"], "connected")
+            self.assertIn("2 h ago", by["uni-login"]["facts"][0])
+            self.assertIn("renewed today", by["moodle"]["facts"][0])
+            (d / "status").write_text("failed %d wrong-password\n" % (now // 1000 - 60))
+            by = {c["id"]: c for c in integrations.hub(self.env, jobs, {})["cards"]}
+            self.assertEqual(by["uni-login"]["status"], "attention")
+            self.assertIn("wrong-password", by["uni-login"]["facts"][0])
+        finally:
+            integrations.UNI_LOGIN_DIR = orig
+
     def test_hub_cards(self):
         integrations.check_all(self.env, lambda e: {"deepseek": {"balance": 14.48, "currency": "USD"},
                                                     "elevenlabs": {"used": 42_000, "limit": 131_000, "tier": "creator"}},

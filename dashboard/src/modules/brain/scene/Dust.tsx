@@ -28,8 +28,11 @@ const vertex = /* glsl */ `
     vColor = aColor;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     // fade out far away and right in front of the camera (no big blurry blobs when zoomed in)
-    vFade = smoothstep(70.0, 18.0, -mv.z) * smoothstep(1.5, 5.0, -mv.z);
-    gl_PointSize = min(aSize * uScale / -mv.z, 7.0 * uScale / 900.0);
+    // smoothstep with its edges reversed is undefined in GLSL (Mac's GPU forgives it, an iPhone's turned it into black and colour-fringed
+    // speckle across the middle of the sky), so the far fade is written the long way round.
+    vFade = (1.0 - smoothstep(18.0, 70.0, -mv.z)) * smoothstep(1.5, 5.0, -mv.z);
+    // never below one pixel: a sub-pixel point has no reliable gl_PointCoord on phone GPUs
+    gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, max(7.0 * uScale / 900.0, 1.0));
     gl_Position = projectionMatrix * mv;
   }
 `
