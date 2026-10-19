@@ -1,0 +1,116 @@
+#!/bin/bash
+# uni-login: the agents sign in to the university for you (docs/UNI-LOGIN.md).
+#   sudo uni-login setup     type the university email, password and authenticator secret (hidden), then a test sign-in
+#   sudo uni-login refresh   sign in now and give the agents the new Moodle cookie (the keep-alive asks for this by itself)
+#   uni-login request        ask for a renewal (what the keep-alive does when the session has ended)
+#   uni-login status         is it set up, and how did the last sign-in go (no secrets)
+#   sudo uni-login off       forget the password and the secret
+# The password and the secret are only ever readable by the locked-down `unilogin` user, never by the agents.
+set -uo pipefail
+CFG=${UNI_CFG:-/etc/uni-login/config.json}          # the UNI_* overrides are for the tests
+STATE=${UNI_STATE:-/var/lib/uni-login}
+PRIV=$STATE/private
+RUNDIR=${UNI_RUN:-/run/uni-login}
+PY=${UNI_PY:-/opt/uni-login/venv/bin/python}
+LIB=${UNI_LIB:-/usr/local/lib/uni-login}
+BROWSERS=${UNI_BROWSERS:-/opt/uni-login/browsers}
+
+as_login() {   # run the browser helper as the locked-down user
+  runuser -u unilogin -- env HOME="$STATE/home" PLAYWRIGHT_BROWSERS_PATH="$BROWSERS" \
+    UNI_LOGIN_CONFIG="$CFG" UNI_LOGIN_PRIVATE="$PRIV" "$PY" -I "$LIB/uni_login.py" "$@"
+}
+cfg() { jq -r "$1 // empty" "$CFG" 2>/dev/null; }
+ORIG=("$@")
+need_root() { [ "$(id -u)" = 0 ] || exec sudo "$0" "${ORIG[@]}"; }
+set_status() { printf '%s\n' "$*" > "$STATE/status.tmp" && chmod 644 "$STATE/status.tmp" && mv "$STATE/status.tmp" "$STATE/status"; }
+
+cookie_ok() {   # the cookie, then the address: does Moodle show the logged-in page?
+  local code
+  code="$(printf 'url = "%s/my/"\ncookie = "MoodleSession=%s"\n' "$2" "$1" | curl -s -o /dev/null -m 30 -w '%{http_code}' -K - || true)"
+  [ "$code" = 200 ]
+}
+
+write_cookie() {   # the cookie on stdin; replaces MOODLE_TOKEN in each target file, keeping its owner and mode
+  local cookie f tmp n=0
+  IFS= read -r cookie
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    [ -f "$f" ] || { echo "uni-login: $f is missing, skipped" >&2; continue; }
+    tmp="$(mktemp "$f.XXXXXX")"
+    { grep -v '^MOODLE_TOKEN=' "$f" || true; printf 'MOODLE_TOKEN=%s\n' "$cookie"; } > "$tmp"
+    chown --reference="$f" "$tmp"; chmod --reference="$f" "$tmp"; mv "$tmp" "$f"
+    n=$((n + 1))
+  done < <(jq -r '.targets[]?' "$CFG")
+  echo "$n"
+}
+
+reason_of() { jq -r '.reason // "unknown"' "$PRIV/last.json" 2>/dev/null || echo unknown; }
+
+refresh() {
+  need_root
+  local force="" cookie rc url n prev
+  [ "${1:-}" = "--force" ] && force="--force"
+  mkdir -p "$RUNDIR"; exec 9>"$RUNDIR/lock"
+  flock -n 9 || { echo "A sign-in is already running."; return 0; }
+  rm -f "$RUNDIR/request"
+  [ -f "$STATE/configured" ] || { echo "Not set up. Run: sudo uni-login setup" >&2; return 0; }
+  url="$(cfg .moodle_url)"
+  prev="$(cat "$STATE/status" 2>/dev/null)"; [ -n "$prev" ] || prev="never 0"
+  set_status "running $(date +%s)"
+  cookie="$(as_login login $force)"; rc=$?
+  if [ "$rc" = 5 ] || [ "$rc" = 4 ]; then   # too soon after the last try, or stopped after a wrong password: keep the old status
+    set_status "$prev"; echo "Not tried now: too soon after the last attempt, or stopped after a wrong password (sudo uni-login setup)." >&2; return 0
+  fi
+  if [ "$rc" != 0 ] || [ -z "$cookie" ]; then
+    set_status "failed $(date +%s) $(reason_of)"; cookie=""; echo "Sign-in failed: $(reason_of)" >&2; return 0
+  fi
+  if ! cookie_ok "$cookie" "$url"; then
+    set_status "failed $(date +%s) cookie-refused"; cookie=""; echo "Moodle did not accept the new cookie." >&2; return 0
+  fi
+  n="$(printf '%s\n' "$cookie" | write_cookie)"; cookie=""
+  set_status "ok $(date +%s)"
+  echo "Signed in; the new Moodle cookie is in $n place(s)."
+  local rcmd; rcmd="$(cfg .restart_cmd)"
+  if [ -n "$rcmd" ]; then   # a quiet restart (it waits until the agents are idle) so the running agents pick up the new cookie
+    systemd-run --quiet --no-block --unit="uni-login-restart-$(date +%s)" -- $rcmd >/dev/null 2>&1 || echo "Restart the agents when idle: $rcmd" >&2
+  fi
+}
+
+case "${1:-}" in
+  setup)
+    need_root
+    [ -x "$PY" ] || { echo "Not installed yet. Run: sudo hermes-addon moodle-login" >&2; exit 1; }
+    echo "The agents will sign in to the university for you. These stay on this server in a folder the agents can't open."
+    read -r -p "University email address: " email </dev/tty
+    read -rs -p "University password (hidden): " pw </dev/tty; echo
+    echo "Now the authenticator secret: the text key shown next to the QR code when you add an authenticator app"
+    echo "(Microsoft: 'I want to use a different authenticator app', then \"Can't scan the image?\"). Scan the QR with your"
+    echo "phone's app as well, so the phone and the server show the same code."
+    read -rs -p "Authenticator secret (hidden): " secret </dev/tty; echo
+    if printf '%s\n%s\n%s\n' "$email" "$pw" "$secret" | as_login save; then
+      pw=""; secret=""
+      touch "$STATE/configured"; chmod 644 "$STATE/configured"
+      read -r -p "Does that code match your phone app? Press Enter to try a real sign-in now (Ctrl-C to stop): " _ </dev/tty
+      refresh --force
+      [ "$(sed 's/ .*//' "$STATE/status")" = ok ] && echo "All set: the agents can use your university login." || {
+        echo "That sign-in didn't work: $(cat "$STATE/status"). Nothing is broken; the old cookie still works until it ends." >&2
+        echo "Ask Claude to look at it (the reason above is safe to share)." >&2; }
+    else pw=""; secret=""; exit 1; fi ;;
+  refresh) shift; refresh "$@" ;;
+  request) touch "$RUNDIR/request" 2>/dev/null && echo "Renewal requested." || { echo "Can't write $RUNDIR/request" >&2; exit 1; } ;;
+  state)   # for scripts: <configured|none> <ok|failed|running|never> <epoch> <reason>
+    if [ -f "$STATE/configured" ]; then c=configured; else c=none; fi
+    s="$(cat "$STATE/status" 2>/dev/null)"; [ -n "$s" ] || s="never 0"
+    echo "$c $s" ;;
+  status)
+    if [ -f "$STATE/configured" ]; then
+      read -r res ts why < "$STATE/status" 2>/dev/null || { res=never; ts=0; why=""; }
+      echo "Set up. Last sign-in: ${res}${why:+ ($why)}$([ "${ts:-0}" -gt 0 ] && date -d "@$ts" '+ at %F %R' 2>/dev/null)"
+    else echo "Not set up (sudo hermes-addon moodle-login)."; fi ;;
+  off)
+    need_root
+    systemctl disable --now uni-login-refresh.path >/dev/null 2>&1 || true
+    rm -rf "${PRIV:?}"/* "$STATE/configured" "$STATE/status"
+    echo "Forgotten: the password and the secret are deleted. The agents keep their current Moodle cookie until it ends." ;;
+  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

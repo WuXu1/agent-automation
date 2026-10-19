@@ -15,7 +15,7 @@ Claude Code and paste the output (it never contains keys). You don't need the fo
 | Agents forget things | Memory keeps lasting facts only by design; tell them "remember that …" for something specific |
 | Disk nearly full | `hermes ssh`, then `sudo du -xh /data --max-depth 2 \| sort -h \| tail` and ask Claude what's safe to delete |
 | Memory tight / slow | `sudo hermes-restart`; the 2 GB swap file helps; don't upgrade the VM size without checking the cost (it doubles) |
-| Moodle stopped | The session cookie expired: `hermes addon moodle` with a fresh one |
+| Moodle stopped | The session cookie expired: `hermes addon moodle` with a fresh one (or set up `hermes addon moodle-login` so the server renews it: `uni-login status` says why it failed) |
 | Gmail stopped | Make a new app password, `hermes addon gmail` |
 
 Logs: `hermes logs` (the agents), `/var/log/agent-automation.log` on the server (the installer), `~/.agent-automation/install.log` here.

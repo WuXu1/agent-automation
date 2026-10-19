@@ -2,6 +2,7 @@
 # hermes-addon: optional extras, any time after the install.
 #   sudo hermes-addon gmail      the chief and assistant can read your Gmail and write drafts (never send, delete or move)
 #   sudo hermes-addon moodle     the tutor and assistant can read your university's Moodle (deadlines, courses, grades; never submit)
+#   sudo hermes-addon moodle-login   the agents sign in to the university themselves (password + authenticator code kept on the server, docs/UNI-LOGIN.md)
 #   sudo hermes-addon backup     nightly encrypted backup to your Google Drive (docs/BACKUPS.md)
 #   sudo hermes-addon studio     a content team for a video page: clips, overlay lines and sounds into planned posts you approve (vm/studio)
 #   sudo hermes-addon <name> off switch one off again
@@ -67,6 +68,24 @@ case "$what" in
     cj_set '.features.moodle' true; apply
     ok "Moodle on for $(cj '.agents[1].name') and $(cj '.agents[2].name'). When it says the session expired: sudo hermes-addon moodle" ;;
 
+  moodle-login)
+    if [ "$off" = off ]; then /usr/local/bin/uni-login off; exit 0; fi
+    [ "$(cj .features.moodle)" = true ] || die "Switch Moodle on first: sudo hermes-addon moodle"
+    step "Moodle sign-in by the agents"
+    say "  The server keeps your university password and your authenticator secret (in a folder the agents can't open) and signs in"
+    say "  for you when the Moodle session ends, so you never paste a cookie again."
+    say "  ${B}What that means:${N} anyone who got into this server could sign in as you at the university, and the university may not allow"
+    say "  automatic sign-ins from a server (check its IT rules). It needs an authenticator-APP code; a 'tap the number' prompt can't be used."
+    say "  Microsoft: https://mysignins.microsoft.com/security-info -> Add sign-in method -> Authenticator app -> 'I want to use a different"
+    say "  authenticator app' -> 'Can't scan the image?' shows the secret. Scan the QR with your phone's app too, so both show the same code."
+    confirm "Set it up?" n || { say "  Nothing changed."; exit 0; }
+    UNI_MOODLE_URL="$(cj .moodle_url)" UNI_TARGETS="$(env_of tutor) $(env_of assistant)" UNI_GROUP=hermes \
+      UNI_RESTART=/usr/local/bin/hermes-restart bash "$KIT/vm/tools/uni-login/install.sh"
+    # the keep-alive script learns to ask for a renewal
+    sd="$HH/profiles/tutor/scripts"
+    sed "s|@URL@|$(cj .moodle_url)|" "$KIT/vm/tools/moodle/moodle-keepalive.sh" | install -o hermes -g hermes -m 755 /dev/stdin "$sd/moodle-keepalive.sh"
+    exec /usr/local/bin/uni-login setup ;;
+
   backup)
     [ -x "$KIT/vm/backup/hermes-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (hermes update)."
     exec bash "$KIT/vm/backup/hermes-addon-backup" ${off:+--off} ;;
@@ -75,5 +94,5 @@ case "$what" in
     [ -x "$KIT/vm/studio/install.sh" ] || die "The content studio isn't in this copy of the kit; update it: sudo hermes-update"
     exec bash "$KIT/vm/studio/install.sh" ${off:+off} ;;
 
-  *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

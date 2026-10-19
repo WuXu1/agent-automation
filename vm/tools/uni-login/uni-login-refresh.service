@@ -1,0 +1,12 @@
+[Unit]
+Description=Sign in to the university and renew the agents' Moodle cookie
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/uni-login refresh
+# a headless browser for a few seconds: capped so it can never starve the agents
+MemoryMax=1000M
+MemorySwapMax=512M
+TimeoutStartSec=300
+Nice=10
+OOMScoreAdjust=500

@@ -1,0 +1,9 @@
+[Unit]
+Description=The agents asked for a new university sign-in
+
+[Path]
+PathExists=/run/uni-login/request
+Unit=uni-login-refresh.service
+
+[Install]
+WantedBy=multi-user.target
