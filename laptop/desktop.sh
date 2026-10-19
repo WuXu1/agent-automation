@@ -217,6 +217,8 @@ else
   git -c advice.detachedHead=false clone -q --depth 1 --branch "$HERMES_TAG" https://github.com/NousResearch/hermes-agent.git "$SRC"
   [ "$(git -C "$SRC" rev-parse HEAD)" = "$HERMES_COMMIT" ] || { rm -rf "$SRC"; die "The download isn't the release this kit is pinned to; stopped. (Nothing was installed.)"; }
   : > "$MARK"
+  # a cache of its own: an old `sudo npm` can leave files in ~/.npm that this user cannot replace, which stops the install ("EACCES ... rename")
+  export NPM_CONFIG_CACHE="$HH/npm-cache"
   say "  Installing the build's parts (a few minutes)…"
   (cd "$SRC" && npm ci --no-audit --no-fund --loglevel=error)
   say "  Compiling the app (a few more minutes; fans may spin up)…"
