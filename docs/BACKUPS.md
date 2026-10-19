@@ -58,7 +58,7 @@ You need: the Google account whose Drive should hold the backups, and a terminal
 The server has no web browser, so the Google sign-in happens on your laptop and you paste the result into the server.
 
 ```bash
-./hermes backup-login
+hermes backup-login
 ```
 
 (Same thing without the `hermes` command: `bash vm/backup/laptop-authorize.sh`.)
@@ -90,7 +90,7 @@ Then:
 ### 2. Switch on the backup
 
 ```bash
-./hermes addon backup
+hermes addon backup
 ```
 
 (This opens the server and runs `sudo hermes-addon backup` there. Already on the server? Run `sudo hermes-addon backup` yourself.)
@@ -110,7 +110,7 @@ After that you can clear the laptop terminal that showed the token (Mac: Cmd+K; 
 ## Checking it works
 
 - **In your browser:** <https://drive.google.com> → My Drive → `agent-automation-backups`: one `hermes-backup-DATE.tar.gz.gpg` per night.
-- **On the server** (`./hermes ssh`):
+- **On the server** (`hermes ssh`):
 
   ```bash
   sudo hermes-addon-backup --status      # last result, next run, newest backups in Drive
@@ -120,8 +120,8 @@ After that you can clear the laptop terminal that showed the token (Mac: Cmd+K; 
 - **Make one now:** `sudo hermes-backup` (add `BACKUP_QUIET=1` in front for no Telegram note if it fails).
 - **If a night fails** you get a Telegram message saying why. Details: `journalctl -u hermes-backup -n 50`. Common causes:
   - *the Google sign-in needs renewing* (you removed rclone's access, or changed something in your Google account): do setup step 1
-    again, then `./hermes addon backup`, keep the passphrase, paste the new line.
-  - *Drive looks full*: free some space, or run `./hermes addon backup` again and keep fewer days.
+    again, then `hermes addon backup`, keep the passphrase, paste the new line.
+  - *Drive looks full*: free some space, or run `hermes addon backup` again and keep fewer days.
   - *rate limit*: Google sometimes limits rclone's shared sign-in for everybody; it normally works the next night.
 
   When an upload fails, that night's (encrypted) backup stays on the server until the next good night, then is deleted.
@@ -133,7 +133,7 @@ Practise once, early on, so you know it works and you know your passphrase.
 ### On the same server (to undo a mess)
 
 ```bash
-./hermes ssh
+hermes ssh
 sudo hermes-restore
 ```
 
@@ -149,10 +149,10 @@ sudo hermes-restore
 
 1. On your laptop: `./install.sh` builds a new server and fresh agents. Answer its questions as before. You can reuse your Telegram bots
    and keys; the restore puts the old settings back anyway.
-2. On your laptop: `./hermes backup-login` (a fresh Google sign-in for the new server).
-3. `./hermes ssh`, then `sudo bash /opt/agent-automation/vm/backup/hermes-restore`. It asks for the `{…}` line from step 2, then your passphrase,
+2. On your laptop: `hermes backup-login` (a fresh Google sign-in for the new server).
+3. `hermes ssh`, then `sudo bash /opt/agent-automation/vm/backup/hermes-restore`. It asks for the `{…}` line from step 2, then your passphrase,
    and continues as above.
-4. Switch the nightly backups on again on the new server: `./hermes addon backup`.
+4. Switch the nightly backups on again on the new server: `hermes addon backup`.
 5. `sudo hermes-doctor`. If you made **new** Telegram bots for the new server, the restore put the old bot tokens back: set the new ones
    with `sudo hermes-key telegram-chief` (and `-tutor`, `-assistant`, `-coach`).
 
@@ -175,8 +175,8 @@ You can open a backup on your laptop:
 
 | To… | Do |
 |---|---|
-| change the passphrase, the Google account or the number of days | `./hermes addon backup` again (it offers to keep what you don't change). A new passphrase applies to new backups; older ones still open with the old one, so keep both until the old ones have aged out. |
-| switch the nightly backup off | `./hermes addon backup off`. The backups in your Drive stay. |
+| change the passphrase, the Google account or the number of days | `hermes addon backup` again (it offers to keep what you don't change). A new passphrase applies to new backups; older ones still open with the old one, so keep both until the old ones have aged out. |
+| switch the nightly backup off | `hermes addon backup off`. The backups in your Drive stay. |
 | cut Google's link completely | switch it off, then on the server `sudo rm /etc/hermes-backup/rclone.conf`, and remove "rclone" at <https://myaccount.google.com/permissions>. |
 | delete all backups | delete the folder `agent-automation-backups` in Drive (and empty Drive's bin). |
 

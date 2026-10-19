@@ -9,7 +9,7 @@ bad() { printf '%s  ✗ %s%s\n' "$R" "$*" "$N"; fail=$((fail+1)); }
 say "${B}Health check${N} ($(date '+%a %d %b %H:%M'))"
 for s in hermes-gateway mem0-server postgresql hermes-dash tailscaled; do
   if systemctl is-active --quiet "$s"; then ok "$s running"
-  else case "$s" in hermes-dash) warn "$s (the dashboard) is not running: ./hermes update reinstalls it" ;; *) bad "$s is not running: sudo systemctl restart $s ; journalctl -u $s -n 30" ;; esac; fi
+  else case "$s" in hermes-dash) warn "$s (the dashboard) is not running: hermes update reinstalls it" ;; *) bad "$s is not running: sudo systemctl restart $s ; journalctl -u $s -n 30" ;; esac; fi
 done
 
 curl -s -m 3 127.0.0.1:8642/health >/dev/null 2>&1 && ok "agents' local API answers" || bad "the agents' local API doesn't answer (gateway starting or stuck)"

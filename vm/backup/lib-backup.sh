@@ -88,7 +88,7 @@ rclone_ok() {
 setup_drive() {
   install -d -m 700 "$BK_CONF"
   say "  The server has no web browser, so you sign in to Google on your laptop and paste the result here:"
-  say "    1. On your laptop, in a ${B}new${N} terminal, in the agent-automation folder:  ${B}./hermes backup-login${N}"
+  say "    1. On your laptop, in a ${B}new${N} terminal:  ${B}hermes backup-login${N}"
   note "   (or: bash vm/backup/laptop-authorize.sh). A Google page opens: pick the account for the backups and Allow."
   say "    2. rclone then prints a line that starts with ${B}{\"access_token\"${N}. Copy that whole line."
   say "    3. Paste it below (nothing shows; that's normal) and press Enter."
@@ -105,7 +105,7 @@ setup_drive() {
       return 0
     fi
     rm -f "$tmp"
-    [ "$tries" -lt 3 ] && warn "Run ./hermes backup-login on your laptop again for a fresh token, then paste it here."
+    [ "$tries" -lt 3 ] && warn "Run hermes backup-login on your laptop again for a fresh token, then paste it here."
   done
   return 1
 }

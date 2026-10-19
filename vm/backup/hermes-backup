@@ -161,7 +161,7 @@ done
 if [ -z "$sent" ]; then
   why="details: sudo cat $OUT/drive.err"
   grep -qi quota "$OUT/drive.err" && why="your Google Drive looks full (free some space, or keep fewer days: docs/BACKUPS.md)"
-  grep -qiE 'invalid_grant|unauthorized|token' "$OUT/drive.err" && why="the Google sign-in needs renewing: ./hermes backup-login on your laptop, then sudo hermes-addon backup"
+  grep -qiE 'invalid_grant|unauthorized|token' "$OUT/drive.err" && why="the Google sign-in needs renewing: hermes backup-login on your laptop, then sudo hermes-addon backup"
   grep -qi rateLimitExceeded "$OUT/drive.err" && why="Google's shared limit for rclone was busy; it usually works the next night"
   # keep tonight's archive (encrypted) on the server until the next good night, but never more than one
   for f in "$OUT"/hermes-backup-*.tar.gz.gpg; do [ -e "$f" ] && [ "$f" != "$OUT/$NAME" ] && rm -f -- "$f"; done

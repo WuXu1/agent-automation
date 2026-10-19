@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # hermes-addon-backup: nightly encrypted backups of your agents to your own Google Drive (optional, free). Set up once:
-#   ./hermes addon backup  (laptop)  or  sudo hermes-addon backup  (server)   set up; run it again to change the passphrase, the Google
+#   hermes addon backup  (laptop)  or  sudo hermes-addon backup  (server)   set up; run it again to change the passphrase, the Google
 #                                      account or how many days are kept
 #   sudo hermes-addon-backup             the same: change the passphrase, the Google account or how many days are kept
 #   sudo hermes-addon-backup --status    when the last backup ran, how it went, what is on Drive
 #   sudo hermes-addon-backup --off       stop the nightly backups (the backups already in your Drive stay there)
-# Before setting up, have your laptop ready for the Google sign-in: ./hermes backup-login (docs/BACKUPS.md explains it all).
+# Before setting up, have your laptop ready for the Google sign-in: hermes backup-login (docs/BACKUPS.md explains it all).
 set -euo pipefail
 [ "$(id -u)" = 0 ] || exec sudo bash "$0" "$@"
 . /opt/agent-automation/vm/lib.sh
@@ -31,7 +31,7 @@ case "${1:-}" in
         | sort -r | head -n 5 | awk -F'|' '{printf "    %s  %6.0f MB  %s\n", $1, $2/1048576, $3}'
       n="$(rclone --config "$BK_CONF/rclone.conf" lsf "gdrive:$BK_FOLDER" --include '*.tar.gz.gpg' 2>/dev/null | wc -l)"
       say "  $n backups in all."
-    elif [ -s "$BK_CONF/rclone.conf" ]; then warn "The Google sign-in no longer works: ./hermes backup-login on your laptop, then sudo hermes-addon backup"
+    elif [ -s "$BK_CONF/rclone.conf" ]; then warn "The Google sign-in no longer works: hermes backup-login on your laptop, then sudo hermes-addon backup"
     fi
     exit 0 ;;
   ""|--setup) ;;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # desktop.sh: the Hermes desktop app on a Mac, already connected to YOUR server. Nothing of Hermes runs on this Mac: no local agent, no Python, no `hermes` command.
 #
-#   bash laptop/desktop.sh                        (or: ./hermes desktop)
+#   bash laptop/desktop.sh                        (or: hermes desktop)
 #   bash laptop/desktop.sh --host 100.x.y.z --admin yourlogin      (when this Mac never ran ./install.sh)
 #   bash laptop/desktop.sh --rebuild              build the app again (after the kit moves to a newer Hermes)
 #   bash laptop/desktop.sh --remove               take it off this Mac again
@@ -99,7 +99,7 @@ PY
 
 if [ "$PRINT_CONFIG" = 1 ]; then write_registry "${HOST:-100.64.0.1}" "$LABEL" "${KEY}" --stdout; exit 0; fi
 
-[ "$(uname -s)" = Darwin ] || die "This is for a Mac. (On Windows or Linux, use the dashboard: ./hermes dashboard.)"
+[ "$(uname -s)" = Darwin ] || die "This is for a Mac. (On Windows or Linux, use the dashboard: hermes dashboard.)"
 
 # ---- take it off again
 if [ "$REMOVE" = 1 ]; then
@@ -244,5 +244,5 @@ say
 say "${B}Done.${N} Hermes opens on your agents. Leave it connected: it starts what it needs on the server and stops it when you quit."
 say "  - Keep Tailscale on, or it can't reach the server."
 say "  - ${B}Never press Update inside the app${N} and say no to anything that says \"Set up Hermes Agent\": that would put a second copy of Hermes on this Mac."
-say "    Updates come with the kit: ./hermes update on the server side, then bash laptop/desktop.sh --rebuild here."
+say "    Updates come with the kit: hermes update, then hermes desktop --rebuild here."
 say "  - The server keeps about 1 GB of memory busy while the app is open; closing the app frees it."

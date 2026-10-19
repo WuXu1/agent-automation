@@ -68,7 +68,7 @@ case "$what" in
     ok "Moodle on for $(cj '.agents[1].name') and $(cj '.agents[2].name'). When it says the session expired: sudo hermes-addon moodle" ;;
 
   backup)
-    [ -x "$KIT/vm/backup/hermes-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (./hermes update)."
+    [ -x "$KIT/vm/backup/hermes-addon-backup" ] || die "The backup add-on isn't in this copy of the kit; update it (hermes update)."
     exec bash "$KIT/vm/backup/hermes-addon-backup" ${off:+--off} ;;
 
   studio)

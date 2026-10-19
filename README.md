@@ -59,36 +59,38 @@ can explain each step and fix problems. Run `./install.sh` yourself in a normal 
 
 ## Everyday use
 
-Talk to your agents on Telegram. Send a voice note and they understand it; typing works the same. From this folder on your computer:
+Talk to your agents on Telegram. Send a voice note and they understand it; typing works the same. In a terminal on your computer (any folder):
 
 | Command | What it does |
 |---|---|
-| `./hermes status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
+| `hermes status` | Health check: services, bots, memory, DeepSeek balance, disk, Azure days used |
 | `sudo hermes-update` (on the server) | Gets the latest kit straight from GitHub and applies it: no laptop folder needed |
-| `./hermes dashboard` | Opens Command Center (Tailscale must be on) |
-| `./hermes update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
-| `./hermes restart` | Restarts the agents (it waits until they're idle) |
-| `./hermes key deepseek` | Changes a key: `deepseek`, `gemini`, `elevenlabs`, `telegram-chief`… |
-| `./hermes logs` | The agents' recent log (useful to paste to Claude when something's wrong) |
-| `./hermes ssh` | A terminal on the server |
+| `hermes dashboard` | Opens Command Center (Tailscale must be on) |
+| `hermes update` | Gets the latest version of this kit and applies it. Your answers, keys, memory and edits stay |
+| `hermes restart` | Restarts the agents (it waits until they're idle) |
+| `hermes key deepseek` | Changes a key: `deepseek`, `gemini`, `elevenlabs`, `telegram-chief`… |
+| `hermes logs` | The agents' recent log (useful to paste to Claude when something's wrong) |
+| `hermes ssh` | A terminal on the server |
 
 ### Later, when you want them
 | Command | Adds |
 |---|---|
-| `./hermes voice` | **Voice replies**: send a voice note, get one back in that agent's own voice. You choose each agent's voice from ElevenLabs (free plan: about 60 short replies a month). [docs/VOICE.md](docs/VOICE.md) |
-| `./hermes addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
-| `./hermes addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
-| `./hermes desktop` | **The Hermes app on your Mac** (Mac only), already connected to your server. It builds just the app, nothing of Hermes runs on the Mac. Needs Tailscale on and about 10 minutes the first time |
-| `./hermes addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
+| `hermes voice` | **Voice replies**: send a voice note, get one back in that agent's own voice. You choose each agent's voice from ElevenLabs (free plan: about 60 short replies a month). [docs/VOICE.md](docs/VOICE.md) |
+| `hermes addon gmail` | Chief and Assistant read your Gmail and save drafts (they can never send, delete or move mail) |
+| `hermes addon moodle` | Tutor and Assistant read your university's Moodle: deadlines, courses, grades (never submit) |
+| `hermes desktop` | **The Hermes app on your Mac** (Mac only), already connected to your server. It builds just the app, nothing of Hermes runs on the Mac. Needs Tailscale on and about 10 minutes the first time |
+| `hermes addon backup` | A nightly encrypted backup of everything to your Google Drive. [docs/BACKUPS.md](docs/BACKUPS.md) |
 
 Phone calls aren't in this kit yet. Voice notes work.
+
+**You can delete the `agent-automation` folder once the install has finished.** The server keeps its own copy and updates itself, and the `hermes` command above is kept in `~/.agent-automation` (the installer offers to add it to your terminal, so `hermes status` works from anywhere; until you open a new terminal window, use `~/.agent-automation/bin/hermes status`). If something ever needs a fix with Claude, clone this repository again and open it in Claude Code.
 
 ## Money
 
 | What | Cost |
 |---|---|
 | Server (Azure: VM, disk, internet address) | about **$1.25 a day** from your $100 student credit, so it lasts **about 80 days**. No card is charged; when the credit runs out Azure switches the server off |
-| DeepSeek | pay as you go: light personal use is usually a few dollars a month. `./hermes status` shows the balance |
+| DeepSeek | pay as you go: light personal use is usually a few dollars a month. `hermes status` shows the balance |
 | Gemini, Telegram, Tailscale, Open-Meteo weather, OpenAlex papers | free |
 | ElevenLabs (voice replies, optional) | free plan, or a student offer |
 
@@ -96,7 +98,7 @@ Your chief of staff reminds you on Telegram after 70 days. Your options then:
 - **Azure for Students renews** every 12 months while you're a student. Check your balance at
   https://www.microsoftazuresponsorships.com/Balance.
 - **Move to a cheaper server.** For example, Hetzner's CX23 costs about €5.50 a month. Restore your backup there.
-- **Delete it** with `./hermes destroy`. It asks twice before deleting anything.
+- **Delete it** with `hermes destroy`. It asks twice before deleting anything.
 
 Don't "Stop" the server in the Azure portal to save credit: student subscriptions can struggle to get it started again.
 

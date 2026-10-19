@@ -41,7 +41,22 @@ put STEP_SERVER "done"
 
 say
 ok "All done."
-"$KIT_DIR/hermes" status || true
-say
-say "${B}You can delete this folder now${N}: the server has its own copy and looks after itself. Everything day to day happens in Telegram and on your dashboard. If something ever needs attention, open this kit in Claude Code and say 'help me with my setup'."
-say "Next: message your chief of staff on Telegram. ${B}./hermes help${N} lists everyday commands (dashboard link, updates, voice later)."
+if sync_local_kit; then
+  ok "The everyday commands are kept in $STATE_DIR/kit, so this folder isn't needed any more"
+  hermes_cmd="$STATE_DIR/bin/hermes"
+  if [ -n "$(command -v hermes 2>/dev/null)" ] && [ "$(command -v hermes)" != "$hermes_cmd" ]; then
+    warn "Another program called 'hermes' is already on this computer, so I'm not adding ours. Run ours as: $hermes_cmd status"
+  elif confirm "Add the 'hermes' command to your terminal, so you can type 'hermes status' from anywhere?" y; then
+    if rc="$(add_hermes_to_path)"; then ok "Added to $rc: open a new terminal window and 'hermes status' works. Until then: $hermes_cmd status"
+    else warn "I couldn't tell which shell you use. Run it as: $hermes_cmd status"; fi
+  else note "No problem. Run it as: $hermes_cmd status"; fi
+  "$hermes_cmd" status || true
+  say
+  say "${B}You can delete this folder now${N}: the server has its own copy and looks after itself. Everything day to day happens in Telegram and on your dashboard. If something ever needs attention, open a terminal and type ${B}hermes status${N}, or clone this kit again and say 'help me with my setup' to Claude Code."
+  say "Next: message your chief of staff on Telegram. ${B}hermes help${N} lists everyday commands (dashboard link, updates, voice later)."
+else
+  warn "I couldn't copy the everyday commands from the server, so keep this folder for now. Running ./hermes update later tries again."
+  "$KIT_DIR/hermes" status || true
+  say
+  say "Next: message your chief of staff on Telegram. ${B}./hermes help${N} lists everyday commands (dashboard link, updates, voice later)."
+fi

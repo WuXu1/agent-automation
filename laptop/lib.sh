@@ -79,10 +79,40 @@ ship_kit() {
              sudo mv /opt/agent-automation.new /opt/agent-automation; sudo rm -rf /opt/agent-automation.old" 2>/dev/null; then
     return 0
   fi
+  [ -f "$KIT_DIR/vm/install.sh" ] || die "The server could not clone the kit from GitHub, and this isn't the full kit folder to copy instead. Check the server's internet, or clone https://github.com/WuXu1/agent-automation again and run ./hermes update from that folder."
   warn "The server could not clone the kit from GitHub, so I'm copying this folder instead (keep this folder then; updates come from it)."
   tar -C "$KIT_DIR" --exclude .git --exclude node_modules --exclude '__pycache__' --exclude '.DS_Store' -czf - . \
     | vm_ssh 'set -e; t=$(mktemp -d); tar -xzf - -C "$t"; sudo rm -rf /opt/agent-automation.new; sudo mv "$t" /opt/agent-automation.new;
               sudo chown -R root:root /opt/agent-automation.new; sudo chmod -R go-w /opt/agent-automation.new; sudo chmod 755 /opt/agent-automation.new;
               sudo rm -rf /opt/agent-automation.old; [ -d /opt/agent-automation ] && sudo mv /opt/agent-automation /opt/agent-automation.old;
               sudo mv /opt/agent-automation.new /opt/agent-automation; sudo rm -rf /opt/agent-automation.old'
+}
+
+# After the install the agent-automation folder is no longer needed: the commands live in ~/.agent-automation/kit and are run through
+# ~/.agent-automation/bin/hermes. The scripts are copied from the server (which holds the kit as a git clone and updates itself), so they
+# stay in step with it: `hermes update` calls this again.
+LOCAL_KIT_FILES="hermes laptop/lib.sh laptop/desktop.sh vm/backup/laptop-authorize.sh"
+sync_local_kit() {
+  local kit="$STATE_DIR/kit" new="$STATE_DIR/kit.new" remote="${REMOTE_KIT:-/opt/agent-automation}"
+  rm -rf "$new"; mkdir -p "$new"
+  # shellcheck disable=SC2086  # LOCAL_KIT_FILES is a list of paths without spaces
+  vm_ssh "tar -C '$remote' -cf - $LOCAL_KIT_FILES" 2>/dev/null | tar -xf - -C "$new" 2>/dev/null \
+    && [ -s "$new/hermes" ] && [ -s "$new/laptop/lib.sh" ] || { rm -rf "$new"; return 1; }
+  rm -rf "$kit.old"; [ -d "$kit" ] && mv "$kit" "$kit.old"
+  mv "$new" "$kit"; rm -rf "$kit.old"
+  mkdir -p "$STATE_DIR/bin"
+  printf '%s\n' '#!/usr/bin/env bash' \
+    '# Runs the agent-automation commands kept in ~/.agent-automation/kit (so the cloned folder can be deleted).' \
+    'exec bash "${HERMES_SETUP_STATE_DIR:-$HOME/.agent-automation}/kit/hermes" "$@"' > "$STATE_DIR/bin/hermes"
+  chmod 755 "$STATE_DIR/bin/hermes"
+}
+
+# Make `hermes status` work from any terminal: one PATH line in the shell's startup file (asked first by the caller).
+add_hermes_to_path() {
+  local rc line
+  case "$(basename "${SHELL:-}")" in zsh) rc="$HOME/.zshrc" ;; bash) if [ "$(os_kind)" = mac ]; then rc="$HOME/.bash_profile"; else rc="$HOME/.bashrc"; fi ;; *) rc="" ;; esac
+  [ -n "$rc" ] || return 1
+  line='export PATH="$HOME/.agent-automation/bin:$PATH"   # agent-automation: the `hermes` command'
+  grep -qF '.agent-automation/bin' "$rc" 2>/dev/null || printf '\n%s\n' "$line" >> "$rc"
+  printf '%s' "$rc"
 }

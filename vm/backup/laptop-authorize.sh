@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # laptop-authorize.sh: the Google Drive sign-in for the server's nightly backups. Runs on YOUR computer (Mac, Linux, or Ubuntu in
-# WSL on Windows), because the server has no web browser.   ./hermes backup-login   (or: bash vm/backup/laptop-authorize.sh)
+# WSL on Windows), because the server has no web browser.   hermes backup-login   (or: bash vm/backup/laptop-authorize.sh)
 # It installs rclone if it is missing (asks first), then runs `rclone authorize "drive"` with Google's narrow drive.file permission:
 # rclone can only see and change the files it creates itself (the backups), never anything else in your Drive.
 # rclone prints the sign-in token on this screen. This script saves nothing and sends nothing: you copy the token and paste it at the
-# server's hidden prompt (./hermes addon backup).
+# server's hidden prompt (hermes addon backup).
 set -euo pipefail
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then B=$'\033[1m'; Y=$'\033[33m'; N=$'\033[0m'; else B=""; Y=""; N=""; fi
 say() { printf '%s\n' "$*"; }
@@ -53,7 +53,7 @@ rclone "${args[@]}" || die "The sign-in didn't finish. Run it again (if it says 
 say
 say "${B}Next${N}"
 say "  1. Copy the whole line above that starts with {\"access_token\" and ends with } (between '--->' and '<---End paste')."
-say "  2. In the agent-automation folder:  ${B}./hermes addon backup${N}  (or on the server: sudo hermes-addon backup)"
+say "  2. In a terminal on your computer:  ${B}hermes addon backup${N}  (or on the server: sudo hermes-addon backup)"
 say "     and paste it at its hidden prompt for the Google Drive token."
 say "  Treat that line like a password: don't put it in a chat or an email. After pasting, clear this window"
 say "  (Mac: Cmd+K; Linux/WSL: type clear). Nothing was saved on this computer."

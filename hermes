@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# hermes: everyday commands, run on your own computer after ./install.sh.
-#   ./hermes status            is everything working? (the health check)
-#   ./hermes dashboard         open the dashboard (Tailscale must be on)
-#   ./hermes restart           restart the agents when they're idle
-#   ./hermes logs              the agents' recent log
-#   ./hermes update            get the latest version of this kit and apply it (keeps your answers, keys and edits)
-#   ./hermes key <name>        change a key: deepseek, gemini, elevenlabs, telegram-chief|tutor|assistant|coach|me
-#   ./hermes voice [off]       voice-note replies in each agent's own voice (ElevenLabs), or switch them off
-#   ./hermes addon <name> [off]   extras: gmail, moodle, backup
-#   ./hermes desktop           (Mac) the Hermes app, already connected to your server; nothing of Hermes runs on the Mac
-#   ./hermes backup-login      sign rclone in to Google Drive on this computer (for: ./hermes addon backup)
-#   ./hermes ssh               a terminal on the server
-#   ./hermes destroy           delete the server and everything on it (asks twice)
+# hermes: everyday commands, run on your own computer after ./install.sh. They are kept in ~/.agent-automation, so the cloned folder can be deleted.
+#   hermes status            is everything working? (the health check)
+#   hermes dashboard         open the dashboard (Tailscale must be on)
+#   hermes restart           restart the agents when they're idle
+#   hermes logs              the agents' recent log
+#   hermes update            get the latest version of this kit and apply it (keeps your answers, keys and edits)
+#   hermes key <name>        change a key: deepseek, gemini, elevenlabs, telegram-chief|tutor|assistant|coach|me
+#   hermes voice [off]       voice-note replies in each agent's own voice (ElevenLabs), or switch them off
+#   hermes addon <name> [off]   extras: gmail, moodle, backup
+#   hermes desktop           (Mac) the Hermes app, already connected to your server; nothing of Hermes runs on the Mac
+#   hermes backup-login      sign rclone in to Google Drive on this computer (for: hermes addon backup)
+#   hermes ssh               a terminal on the server
+#   hermes destroy           delete the server and everything on it (asks twice)
 set -euo pipefail
 KIT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$KIT_DIR/laptop/lib.sh"
@@ -26,7 +26,7 @@ case "$cmd" in
   dashboard)
     need_vm
     url="$(vm_ssh "sudo jq -r '.dashboard_url // empty' /data/.hermes/hermes.json")"
-    [ -n "$url" ] || die "The dashboard isn't set up yet: ./hermes update"
+    [ -n "$url" ] || die "The dashboard isn't set up yet: hermes update"
     say "Dashboard: $url   (works on any of your devices with Tailscale on)"
     (open "$url" 2>/dev/null || xdg-open "$url" 2>/dev/null || cmd.exe /c start "$url" 2>/dev/null || true) ;;
   restart) remote "sudo hermes-restart $*" ;;
@@ -36,13 +36,15 @@ case "$cmd" in
     if vm_ssh 'test -d /opt/agent-automation/.git' 2>/dev/null; then
       say "The server updates itself from GitHub…"
       vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 hermes-update" </dev/tty
+      sync_local_kit || warn "Couldn't refresh the commands kept on this computer (the server is updated)."
     else
       if [ -d "$KIT_DIR/.git" ] && have git; then
         say "Getting the latest kit…"
         git -C "$KIT_DIR" pull --ff-only || warn "Couldn't update the kit with git (local edits?). Applying the copy you have."
-      else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./hermes update."; fi
+      else warn "This folder isn't a git clone, so I can't fetch updates: download the latest from GitHub, then run ./hermes update from it."; fi
       ship_kit && ok "Kit put on the server"
       vm_ssh -t "sudo HERMES_SETUP_UNATTENDED=1 bash /opt/agent-automation/vm/install.sh" </dev/tty
+      sync_local_kit || warn "Couldn't refresh the commands kept on this computer (the server is updated)."
     fi ;;
   key)   [ -n "${1:-}" ] || die "Which key? deepseek, gemini, elevenlabs, telegram-chief, telegram-tutor, telegram-assistant, telegram-coach"
          remote "sudo hermes-key $1" ;;
