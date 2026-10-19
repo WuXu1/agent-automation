@@ -106,7 +106,7 @@ case "${1:-}" in
     if [ -f "$STATE/configured" ]; then
       read -r res ts why < "$STATE/status" 2>/dev/null || { res=never; ts=0; why=""; }
       echo "Set up. Last sign-in: ${res}${why:+ ($why)}$([ "${ts:-0}" -gt 0 ] && date -d "@$ts" '+ at %F %R' 2>/dev/null)"
-    else echo "Not set up (sudo hermes-addon moodle-login)."; fi ;;
+    else echo "Not set up (run: sudo uni-login setup)."; fi ;;
   off)
     need_root
     systemctl disable --now uni-login-refresh.path >/dev/null 2>&1 || true
