@@ -120,6 +120,7 @@ class ExpansionTest(unittest.TestCase):
             self.assertEqual(by["moodle"]["status"], "connected")
             self.assertNotIn("cookie file not found", by["moodle"]["facts"])
             self.assertEqual(by["uni-login"]["status"], "unknown")                       # not set up yet
+            self.assertEqual(by["icloud"]["addon"], "icloud")                            # the iCloud calendar has a card
             self.assertIn("not set up", by["uni-login"]["facts"][0])
             (d / "configured").write_text("")
             (d / "status").write_text("ok %d\n" % (now // 1000 - 7200))

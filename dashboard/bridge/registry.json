@@ -24,6 +24,9 @@
      "keys": ["MOODLE_TOKEN", "MOODLE_BASE_URL", "MOODLE_NO_UPDATE_CHECK"],
      "secret": "the tutor's and assistant's .env (MOODLE_TOKEN)", "fix": "copy a fresh MoodleSession cookie from your browser and type it in on the server with: sudo hermes-addon moodle",
      "enable": "switch it on, on the server, with: sudo hermes-addon moodle", "check": "builtin"},
+    {"id": "icloud", "name": "iCloud calendar", "kind": "app-specific password, CalDAV", "feature": "icloud", "usedBy": ["default", "tutor", "assistant"], "keys": ["ICLOUD_APPLE_ID", "ICLOUD_APP_PASSWORD"],
+     "secret": "/data/.hermes/owner/.secrets/icloud.env", "fix": "make a new app-specific password at account.apple.com and type it in on the server with the login script (for example: sudo -u hermes -i /data/.hermes/scripts/set-icloud-login.sh)",
+     "enable": "have your Claude session set it up on the server: a calendar tool, a login script and a skill for each agent", "note": "reads freely; changes are previewed and need your yes in chat", "check": "builtin"},
     {"id": "phone", "name": "Phone line (ElevenLabs + Twilio)", "kind": "phone desk service (add-on)", "feature": "phone", "usedBy": ["default"], "keys": [],
      "secret": "/data/.hermes/voice-desk/secrets.env (the desk's own secrets; the Twilio login is never kept here)", "service": "voice-desk",
      "fix": "see docs/PHONE.md; restart the desk with: sudo systemctl restart voice-desk",
@@ -47,7 +50,7 @@
     {"key": "weather", "label": "Weather", "who": ["default", "assistant", "coach"], "rule": "forecasts only"},
     {"key": "openalex", "label": "Paper search", "who": ["tutor"], "rule": "OpenAlex, read only"},
     {"key": "gmail", "label": "Gmail (add-on)", "who": ["default", "assistant"], "rule": "read and draft; never sends without your yes"},
-    {"key": "icloud", "label": "iCloud calendar (add-on)", "who": ["tutor", "assistant"], "rule": "the tutor reads; the assistant writes"}
+    {"key": "icloud", "label": "iCloud calendar", "who": ["default", "tutor", "assistant"], "rule": "the chief and the tutor read; the assistant changes events only after your yes"}
   ],
   "mcp": {
     "moodle": "one session cookie; renew it when it expires",
