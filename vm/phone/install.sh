@@ -117,8 +117,12 @@ if [ -z "$(jq -r '.max_number // empty' "$STATE/config.json" 2>/dev/null)" ]; th
 fi
 
 # 4. a public address for ElevenLabs to reach the desk: Tailscale Funnel on port 8443
-out="$(timeout 25 tailscale funnel --bg --https=8443 "$PORT" 2>&1 || true)"
-if ! tailscale funnel status 2>/dev/null | grep -q ":8443"; then
+out="$(timeout 40 tailscale funnel --bg --https=8443 "$PORT" 2>&1 || true)"
+for _ in $(seq 1 20); do   # the first time, Tailscale needs a little while to get the address's certificate
+  tailscale funnel status 2>/dev/null | grep -q ":8443 (Funnel on)" && break
+  sleep 3
+done
+if ! tailscale funnel status 2>/dev/null | grep -q ":8443 (Funnel on)"; then
   warn "Tailscale Funnel isn't switched on for this server yet. It lets ElevenLabs (not the public) reach the phone desk."
   printf '%s\n' "$out" | grep -o 'https://login.tailscale.com[^ ]*' | head -1 | sed 's/^/    Open: /' >&2 || true
   say "  An admin of your Tailscale network does this once: admin console -> Access controls -> add the 'funnel' attribute for this machine"
