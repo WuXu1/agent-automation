@@ -113,7 +113,7 @@ if [ -z "$(jq -r '.max_number // empty' "$STATE/config.json" 2>/dev/null)" ]; th
     printf '%s' "$mine" | grep -Eq '^(\+|0)[0-9]{9,14}$' && break
     warn "That doesn't look like a phone number."
   done
-  printf '%s\n' "$mine" | desk_admin set-owner-number >/dev/null 2>&1; mine=""
+  printf '%s\n' "$mine" | desk_admin set-owner-number --stdin >/dev/null 2>&1; mine=""
 fi
 
 # 4. a public address for ElevenLabs to reach the desk: Tailscale Funnel on port 8443

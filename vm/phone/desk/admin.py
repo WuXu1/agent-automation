@@ -2,7 +2,7 @@
 
   python3 -m desk.admin init --public-base URL  first-time setup of the state folder: a private secrets file with a fresh tool
                                                 secret (never shown) and a config.json in dry mode
-  python3 -m desk.admin set-owner-number
+  python3 -m desk.admin set-owner-number [--stdin]
                                                 store {{OWNER}}'s number (typed silently)
   python3 -m desk.admin status                  what the running desk is doing (its own GET /status; the database alone if
                                                 the service does not answer)
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("notify-test").add_argument("--voice", action="store_true")
     sub.add_parser("self-check").add_argument("--url")
     sub.add_parser("init").add_argument("--public-base", required=True)
-    sub.add_parser("set-owner-number")
+    sub.add_parser("set-owner-number").add_argument("--stdin", action="store_true")
     for name in ("dial-mode", "notify-mode"):
         sub.add_parser(name).add_argument("mode", choices=("live", "dry"))
     sub.add_parser("call-summaries").add_argument("state", choices=("on", "off"),
@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         print("state folder ready" + ("; a new tool secret was generated (not shown)" if made["created_secret"] else ""))
         return 0
     if args.command == "set-owner-number":
-        number = util.normalise_number(getpass.getpass("{{OWNER}}'s number: "))
+        number = util.normalise_number(sys.stdin.readline() if args.stdin else getpass.getpass("{{OWNER}}'s number: "))
         config.update_config_json(args.state_dir, {"max_number": number})
         print("{{OWNER}}'s number saved")
         return 0

@@ -117,6 +117,18 @@ class AdminTest(unittest.TestCase):
             self.assertEqual(json.loads((Path(tmp) / "config.json").read_text())["max_number"], "+447700900123")
             self.assertNotIn("7700", out.getvalue())
 
+    def test_set_owner_number_can_read_it_from_stdin_without_asking_again(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()) as out:
+            original_in, original_pw = admin.sys.stdin, admin.getpass.getpass
+            admin.sys.stdin = io.StringIO("07700 900123\n")
+            admin.getpass.getpass = lambda prompt="": self.fail("it must not prompt when the number comes on stdin")
+            try:
+                self.assertEqual(admin.main(["--state-dir", tmp, "set-owner-number", "--stdin"]), 0)
+            finally:
+                admin.sys.stdin, admin.getpass.getpass = original_in, original_pw
+            self.assertEqual(json.loads((Path(tmp) / "config.json").read_text())["max_number"], "+447700900123")
+            self.assertNotIn("7700", out.getvalue())
+
     def test_mode_switches_edit_the_config_file(self):
         with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(admin.main(["--state-dir", tmp, "dial-mode", "live"]), 0)
