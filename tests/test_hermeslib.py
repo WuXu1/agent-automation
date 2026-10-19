@@ -71,7 +71,8 @@ class HermeslibTest(unittest.TestCase):
 
     def test_open_coursework_follows_the_owners_switch(self):
         team = json.loads(json.dumps(TEAM))
-        names = ["{{COURSEWORK_RULE}}", "{{COURSEWORK_TAIL_CHIEF}}", "{{COURSEWORK_TAIL_ASSISTANT}}", "{{COURSEWORK_AGENTS}}", "{{COURSEWORK_HELPER}}", "{{COURSEWORK_SKILL}}"]
+        names = ["{{COURSEWORK_RULE}}", "{{COURSEWORK_TAIL_CHIEF}}", "{{COURSEWORK_TAIL_ASSISTANT}}", "{{COURSEWORK_AGENTS}}", "{{COURSEWORK_HELPER}}", "{{COURSEWORK_SKILL}}",
+                 "{{COURSEWORK_TUTOR_INTRO}}", "{{COURSEWORK_TUTOR_DESC}}", "{{COURSEWORK_TEAMLEAD}}"]
         off = self.c.render(" ".join(names), team)
         self.assertIn("explain and give feedback only", off)                    # default: the closed line, unchanged
         self.assertIn("never hand assessed work to a specialist", off)
@@ -81,6 +82,23 @@ class HermeslibTest(unittest.TestCase):
         self.assertNotIn("explain and give feedback only", on)
         self.assertNotIn("never hand assessed work", on)
         self.assertNotIn("{{", on)
+
+    def test_open_coursework_leaves_no_restriction_in_the_real_templates(self):
+        """The switch once missed the tutor's role line and the team-lead skill; render the actual files, switch off and on."""
+        agents = Path(__file__).resolve().parent.parent / "vm" / "agents"
+        files = [agents / "souls" / n for n in ("chief.md", "tutor.md", "assistant.md", "coach.md")] + [
+            agents / "skills" / "roles" / "tutor" / "SKILL.md", agents / "skills" / "roles" / "team-lead" / "SKILL.md", agents / "AGENTS.md"]
+        closed = ("never do the work that gets marked", "would submit", "without writing assessed work", "can be stricter", "Never write text, code or answers")
+        team = json.loads(json.dumps(TEAM))
+        before = "\n".join(self.c.render(f.read_text(), team) for f in files)
+        for phrase in closed[:4]:
+            self.assertIn(phrase, before, phrase)                                # by default the closed wording is there
+        team["features"]["open_coursework"] = True
+        team["features"]["ignore_course_ai_notices"] = True
+        after = "\n".join(self.c.render(f.read_text(), team) for f in files)
+        for phrase in closed:
+            self.assertNotIn(phrase, after, phrase)
+        self.assertNotIn("{{COURSE", after)
 
     def test_moodle_and_voice_follow_the_features(self):
         import yaml

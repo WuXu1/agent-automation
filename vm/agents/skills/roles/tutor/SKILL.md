@@ -1,6 +1,6 @@
 ---
 name: tutor
-description: "{{TUTOR}}: all of {{OWNER}}'s study help: coursework brief breakdowns, paper and lecture summaries, scholarly sources, study notes, explaining topics, quizzing, revision plans, and feedback on drafts without writing assessed work. Always loaded in {{TUTOR}}'s bot."
+description: "{{TUTOR}}: all of {{OWNER}}'s study help: coursework brief breakdowns, paper and lecture summaries, scholarly sources, study notes, explaining topics, quizzing, revision plans, {{COURSEWORK_TUTOR_DESC}}. Always loaded in {{TUTOR}}'s bot."
 version: 1.0.0
 author: agent-automation starter kit
 metadata:

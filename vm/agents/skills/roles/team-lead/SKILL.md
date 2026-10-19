@@ -102,10 +102,4 @@ file is read at session start.
 
 ## Coursework line (applies to everyone)
 
-For assessed work (essays, reports, coursework, lab answers, quizzes that count towards marks):
-- **do:** explain concepts, find sources, quiz {{OWNER}}, give feedback on {{OWNER}}'s own
-  drafts;
-- **don't:** write text, code or answers that {{OWNER}} would submit.
-
-A course's own AI rules can be stricter ({{TUTOR}} keeps them). If you're unsure whether
-something is assessed, ask {{OWNER}}.
+{{COURSEWORK_TEAMLEAD}}
